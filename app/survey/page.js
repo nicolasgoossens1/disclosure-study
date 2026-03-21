@@ -8,30 +8,20 @@ export default function Survey() {
   const [estimate, setEstimate] = useState(50)
   const [trust, setTrust] = useState(3)
   const [comfort, setComfort] = useState(3)
-  const [control, setControl] = useState(3)
-  const [perceivedAttrs, setPerceivedAttrs] = useState({
-    University: null,
-    Major: null,
-    Hobby: null
-  })
+  const [natural, setNatural] = useState(3)
   const [submitting, setSubmitting] = useState(false)
-
-  function setAttr(attr, opt) {
-    setPerceivedAttrs(prev => ({ ...prev, [attr]: opt }))
-  }
 
   async function handleSubmit() {
     setSubmitting(true)
     const sessionId = localStorage.getItem('sessionId')
-const nickname = localStorage.getItem('name') || 'Anonymous'
+    const name = localStorage.getItem('name') || 'Anonymous'
 
     const perception = {
       estimatedLeakage: estimate,
       trust,
       comfort,
-      control,
-      perceivedAttributes: perceivedAttrs,
-      nickname
+      natural,
+      name
     }
 
     localStorage.setItem('perception', JSON.stringify(perception))
@@ -51,24 +41,24 @@ const nickname = localStorage.getItem('name') || 'Anonymous'
 
         <div className="space-y-2">
           <p className="text-xs text-gray-500 uppercase tracking-widest">
-            Before we show your score
+            Almost done
           </p>
           <h1 className="text-2xl font-medium">
-            How do you think you did?
+            Quick questions about that conversation
           </h1>
           <p className="text-gray-400 text-sm">
-            Answer honestly — your estimates won't affect your score.
+            Answer honestly — there are no right or wrong answers.
           </p>
         </div>
 
-        {/* Leakage estimate */}
+        {/* Personal info estimate — KEY H3 QUESTION */}
         <div className="space-y-4">
           <div>
             <p className="text-sm font-medium mb-1">
-              How much of your secret do you think the AI figured out?
+              How much personal information do you think you shared in that conversation?
             </p>
             <p className="text-xs text-gray-500">
-              0% = nothing revealed · 100% = everything revealed
+              0% = nothing personal · 100% = very personal details
             </p>
           </div>
           <div className="space-y-2">
@@ -77,7 +67,7 @@ const nickname = localStorage.getItem('name') || 'Anonymous'
               <span className="text-white font-medium text-base">
                 {estimate}%
               </span>
-              <span>Everything</span>
+              <span>A lot</span>
             </div>
             <input
               type="range"
@@ -90,40 +80,13 @@ const nickname = localStorage.getItem('name') || 'Anonymous'
           </div>
         </div>
 
-        {/* Attribute estimates */}
-        <div className="space-y-4">
-          <p className="text-sm font-medium">
-            Which attributes do you think the AI guessed correctly?
-          </p>
-          {['University', 'Major', 'Hobby'].map(attr => (
-            <div key={attr} className="flex justify-between items-center">
-              <span className="text-sm text-gray-300">{attr}</span>
-              <div className="flex gap-2">
-                {['No', 'Partially', 'Yes'].map(opt => (
-                  <button
-                    key={opt}
-                    onClick={() => setAttr(attr, opt)}
-                    className={`text-xs px-3 py-1 rounded-full border transition ${
-                      perceivedAttrs[attr] === opt
-                        ? 'bg-white text-black border-white'
-                        : 'border-gray-700 text-gray-400 hover:border-gray-500'
-                    }`}
-                  >
-                    {opt}
-                  </button>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-
         {/* Likert scales */}
         <div className="space-y-6">
-          <p className="text-sm font-medium">Rate your experience</p>
+          <p className="text-sm font-medium">Rate the conversation</p>
           {[
-            { label: 'I trusted the AI', value: trust, set: setTrust },
-            { label: 'I felt comfortable during the conversation', value: comfort, set: setComfort },
-            { label: 'I felt in control of what I shared', value: control, set: setControl },
+            { label: 'The conversation felt natural', value: natural, set: setNatural },
+            { label: 'I trusted the AI during the conversation', value: trust, set: setTrust },
+            { label: 'I felt comfortable sharing during the conversation', value: comfort, set: setComfort },
           ].map((item, idx) => (
             <div key={idx} className="space-y-2">
               <p className="text-sm text-gray-300">{item.label}</p>
@@ -155,7 +118,7 @@ const nickname = localStorage.getItem('name') || 'Anonymous'
           disabled={submitting}
           className="w-full bg-white text-black py-4 rounded-xl font-medium hover:bg-gray-200 transition disabled:opacity-50"
         >
-          {submitting ? 'Saving...' : 'See my results →'}
+          {submitting ? 'Saving...' : 'See what the AI learned →'}
         </button>
 
       </div>
