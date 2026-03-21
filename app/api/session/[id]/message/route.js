@@ -11,7 +11,7 @@ const openai = new OpenAI({
 
 export async function POST(request, { params }) {
   const { id } = await params
-  const session = getSession(id)
+  const session = await getSession(id) // fix 1 — was missing await
   if (!session) {
     return NextResponse.json(
       { error: 'Session not found' },
@@ -21,11 +21,11 @@ export async function POST(request, { params }) {
 
   const { content } = await request.json()
 
-  addMessage(id, 'user', content)
+  await addMessage(id, 'user', content) // fix 2 — was missing await
 
   const messages = [
     { role: 'system', content: PROMPTS[session.condition] },
-    ...session.messages.map(m => ({
+    ...(session.messages || []).map(m => ({ // fix 3 — fallback for undefined messages
       role: m.role,
       content: m.content
     }))
@@ -37,7 +37,7 @@ export async function POST(request, { params }) {
   })
 
   const reply = response.choices[0].message.content
-  addMessage(id, 'assistant', reply)
+  await addMessage(id, 'assistant', reply) // fix 2 — was missing await
 
   return NextResponse.json({ reply })
 }
