@@ -22,26 +22,24 @@ useEffect(() => {
   hasStarted.current = true
 
   async function loadSession() {
-    const id = localStorage.getItem('sessionId')
-    const storedSecret = localStorage.getItem('sessionSecret')
+  const id = localStorage.getItem('sessionId')
+  const storedSecret = localStorage.getItem('sessionSecret')
 
-    if (!id || !storedSecret) {
-      router.push('/')
-      return
-    }
-
-    setSessionId(id)
-    setSecret(JSON.parse(storedSecret))
-    setSessionStarted(true)
-
-    const openingRes = await fetch(`/api/session/${id}/message`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content: '__opening__' })
-    })
-    const openingData = await openingRes.json()
-    setMessages([{ role: 'assistant', content: openingData.reply }])
+  if (!id || !storedSecret) {
+    router.push('/')
+    return
   }
+
+  setSessionId(id)
+  setSecret(JSON.parse(storedSecret))
+  setSessionStarted(true)
+
+  // Show a fake opening message without calling the API
+  setMessages([{ 
+    role: 'assistant', 
+    content: "Hey! Great to meet you. So what brings you to this networking event today?" 
+  }])
+}
   loadSession()
 }, [])
   // Countdown timer
