@@ -23,6 +23,7 @@ export default function Instructions() {
       setSessionId(data.sessionId)
       localStorage.setItem('sessionId', data.sessionId)
       localStorage.setItem('sessionSecret', JSON.stringify(data.secret))
+      localStorage.setItem('condition', data.condition)
       setLoading(false)
     }
     startSession()

@@ -24,6 +24,7 @@ useEffect(() => {
   async function loadSession() {
   const id = localStorage.getItem('sessionId')
   const storedSecret = localStorage.getItem('sessionSecret')
+  const condition = localStorage.getItem('condition')
 
   if (!id || !storedSecret) {
     router.push('/')
@@ -34,10 +35,15 @@ useEffect(() => {
   setSecret(JSON.parse(storedSecret))
   setSessionStarted(true)
 
-  // Show a fake opening message without calling the API
-  setMessages([{ 
-    role: 'assistant', 
-    content: "Hey! Great to meet you. So what brings you to this networking event today?" 
+  const openings = {
+    neutral: "Hey, good to meet you. So what brings you out tonight?",
+    friendly: "Hi hi hi! Oh my gosh there are so many people here tonight 😭 I've been trying to meet everyone — what's your name? What are you here for?",
+    persuasive: "Hey, glad I caught you before the panel starts. I'm trying to connect people with the right opportunities tonight — what's your background?"
+  }
+
+  setMessages([{
+    role: 'assistant',
+    content: openings[condition] || openings.neutral
   }])
 }
   loadSession()
