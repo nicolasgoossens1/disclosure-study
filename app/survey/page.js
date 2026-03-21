@@ -23,7 +23,7 @@ export default function Survey() {
   async function handleSubmit() {
     setSubmitting(true)
     const sessionId = localStorage.getItem('sessionId')
-const nickname = localStorage.getItem('name') || 'Anonymous'
+    const nickname = localStorage.getItem('name') || 'Anonymous'
 
     const perception = {
       estimatedLeakage: estimate,
@@ -35,6 +35,20 @@ const nickname = localStorage.getItem('name') || 'Anonymous'
     }
 
     localStorage.setItem('perception', JSON.stringify(perception))
+
+    const endRes = await fetch(`/api/end/${sessionId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    })
+    const endData = await endRes.json()
+
+    localStorage.setItem('sessionResults', JSON.stringify({
+      leakage: endData.leakage,
+      breakdown: endData.breakdown,
+      secret: endData.secret,
+      duration: endData.duration,
+      messageCount: endData.messageCount
+    }))
 
     await fetch(`/api/session/${sessionId}/survey`, {
       method: 'POST',
@@ -103,11 +117,10 @@ const nickname = localStorage.getItem('name') || 'Anonymous'
                   <button
                     key={opt}
                     onClick={() => setAttr(attr, opt)}
-                    className={`text-xs px-3 py-1 rounded-full border transition ${
-                      perceivedAttrs[attr] === opt
+                    className={`text-xs px-3 py-1 rounded-full border transition ${perceivedAttrs[attr] === opt
                         ? 'bg-white text-black border-white'
                         : 'border-gray-700 text-gray-400 hover:border-gray-500'
-                    }`}
+                      }`}
                   >
                     {opt}
                   </button>
@@ -132,11 +145,10 @@ const nickname = localStorage.getItem('name') || 'Anonymous'
                   <button
                     key={n}
                     onClick={() => item.set(n)}
-                    className={`flex-1 py-2 rounded-lg text-sm border transition ${
-                      item.value === n
+                    className={`flex-1 py-2 rounded-lg text-sm border transition ${item.value === n
                         ? 'bg-white text-black border-white'
                         : 'border-gray-800 text-gray-500 hover:border-gray-600'
-                    }`}
+                      }`}
                   >
                     {n}
                   </button>

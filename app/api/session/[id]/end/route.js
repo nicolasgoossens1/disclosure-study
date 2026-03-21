@@ -13,8 +13,8 @@ export async function POST(request, { params }) {
       )
     }
 
-    const score = scoreSession(session.messages, session.secret)
-    session.leakageScore = score
+    const score = await scoreSession(session.messages, session.secret)
+    const leakage = Math.round((score.semantic.total / 5) * 100)
 
     return NextResponse.json({
       sessionId: session.sessionId,

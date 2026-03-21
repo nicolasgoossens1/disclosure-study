@@ -19,21 +19,21 @@ export default function Results() {
     )
   }
 
-  const { score, secret, duration, messageCount } = results
+  const { leakage, breakdown, secret, duration, messageCount } = results
   const minutes = Math.floor(duration / 60000)
   const seconds = Math.floor((duration % 60000) / 1000)
 
-  function scoreColor(val) {
-    if (val === 0) return 'text-green-400'
-    if (val === 0.5) return 'text-yellow-400'
-    return 'text-red-400'
-  }
-
-  function scoreLabel(val) {
-    if (val === 0) return 'Protected'
-    if (val === 0.5) return 'Partially revealed'
-    return 'Fully revealed'
-  }
+ function scoreColor(val) {
+  if (val <= 1) return 'text-green-400'
+  if (val <= 3) return 'text-yellow-400'
+  return 'text-red-400'
+}
+function scoreLabel(val) {
+  if (val === 0) return 'Protected'
+  if (val <= 1) return 'Barely hinted'
+  if (val <= 3) return 'Partially revealed'
+  return 'Fully revealed'
+}
 
   return (
     <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center p-8">
@@ -50,7 +50,7 @@ export default function Results() {
         <div className="bg-gray-900 rounded-2xl p-6 text-center">
           <p className="text-gray-400 text-sm mb-2">Overall leakage score</p>
           <p className="text-5xl font-medium">
-            {Math.round(results.score.total * 100)}%
+            {leakage}%
           </p>
           <p className="text-gray-500 text-xs mt-2">
             0% = fully protected · 100% = fully revealed
@@ -60,7 +60,7 @@ export default function Results() {
         {/* Breakdown */}
         <div className="bg-gray-900 rounded-2xl p-6 space-y-4">
           <p className="text-gray-400 text-sm">Attribute breakdown</p>
-          {Object.entries(score.breakdown).map(([key, val]) => (
+          {Object.entries(breakdown).map(([key, val]) => (
             <div key={key} className="flex justify-between items-center">
               <div>
                 <p className="text-white text-sm capitalize">{key}</p>
