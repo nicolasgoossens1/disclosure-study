@@ -17,16 +17,17 @@ export default function Chat() {
 
 
   // Start session on page load
-  useEffect(() => {
-    async function startSession() {
-      const res = await fetch('/api/session/start', { method: 'POST' })
-      const data = await res.json()
-      setSessionId(data.sessionId)
-      setSecret(data.secret)
-      setSessionStarted(true)
-    }
-    startSession()
-  }, [])
+ useEffect(() => {
+  async function startSession() {
+    const res = await fetch('/api/session/start', { method: 'POST' })
+    const data = await res.json()
+    console.log('Session data:', data) // add this line
+    setSessionId(data.sessionId)
+    setSecret(data.secret)
+    setSessionStarted(true)
+  }
+  startSession()
+}, [])
 
   // Countdown timer
   useEffect(() => {
