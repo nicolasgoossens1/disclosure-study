@@ -2,8 +2,10 @@
 const nextConfig = {
   /* config options here */
   reactCompiler: true,
-    devIndicators: false
+    devIndicators: false,
+  reactStrictMode: false
 
+  
 };
 
 export default nextConfig;

@@ -9,7 +9,7 @@ export default function Home() {
           You will be given a secret identity. Chat with an AI 
           for 5 minutes. Try not to reveal who you are.
         </p>
-        <Link href="/chat">
+        <Link href="/instructions">
           <button className="w-full bg-white text-black py-3 rounded-xl font-medium hover:bg-gray-200 transition mt-4">
             Start Session
           </button>

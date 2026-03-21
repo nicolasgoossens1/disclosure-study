@@ -14,21 +14,36 @@ export default function Chat() {
   const [sessionStarted, setSessionStarted] = useState(false)
   const bottomRef = useRef(null)
   const inputRef = useRef(null)
+const hasStarted = useRef(false)
 
 
-  // Start session on page load
- useEffect(() => {
-  async function startSession() {
-    const res = await fetch('/api/session/start', { method: 'POST' })
-    const data = await res.json()
-    console.log('Session data:', data) // add this line
-    setSessionId(data.sessionId)
-    setSecret(data.secret)
+useEffect(() => {
+  if (hasStarted.current) return
+  hasStarted.current = true
+
+  async function loadSession() {
+    const id = localStorage.getItem('sessionId')
+    const storedSecret = localStorage.getItem('sessionSecret')
+
+    if (!id || !storedSecret) {
+      router.push('/')
+      return
+    }
+
+    setSessionId(id)
+    setSecret(JSON.parse(storedSecret))
     setSessionStarted(true)
-  }
-  startSession()
-}, [])
 
+    const openingRes = await fetch(`/api/session/${id}/message`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: '__opening__' })
+    })
+    const openingData = await openingRes.json()
+    setMessages([{ role: 'assistant', content: openingData.reply }])
+  }
+  loadSession()
+}, [])
   // Countdown timer
   useEffect(() => {
     if (!sessionStarted) return
@@ -66,16 +81,32 @@ export default function Chat() {
 
   }
 
-  async function handleEndSession() {
-    if (!sessionId) return
-    const res = await fetch(`/api/session/${sessionId}/end`, {
-      method: 'POST'
+async function handleEndSession() {
+  if (!sessionId) return
+  const res = await fetch(`/api/session/${sessionId}/end`, {
+    method: 'POST'
+  })
+  const data = await res.json()
+
+  const nickname = localStorage.getItem('nickname') || 'Anonymous'
+
+  await fetch('/api/leaderboard', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      nickname,
+      leakage: data.score.total,
+      messageCount: data.messageCount,
+      duration: data.duration
     })
-    const data = await res.json()
-    // Store results and go to results page
-    localStorage.setItem('sessionResults', JSON.stringify(data))
-    router.push('/results')
-  }
+  })
+
+  localStorage.setItem('sessionResults', JSON.stringify({
+    ...data,
+    nickname
+  }))
+  router.push('/results')
+}
 
   function formatTime(seconds) {
     const m = Math.floor(seconds / 60).toString().padStart(2, '0')
