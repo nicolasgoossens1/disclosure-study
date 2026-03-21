@@ -86,8 +86,7 @@ async function handleEndSession() {
   })
   const data = await res.json()
 
-  const nickname = localStorage.getItem('nickname') || 'Anonymous'
-
+const nickname = localStorage.getItem('name') || 'Anonymous'
   await fetch('/api/leaderboard', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -103,7 +102,7 @@ async function handleEndSession() {
     ...data,
     nickname
   }))
-  router.push('/results')
+  router.push('/survey')
 }
 
   function formatTime(seconds) {

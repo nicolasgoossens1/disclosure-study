@@ -9,6 +9,7 @@ export default function Instructions() {
   const [secret, setSecret] = useState(null)
   const [sessionId, setSessionId] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [nickname, setNickname] = useState('')
   const hasStarted = useRef(false)
 
   useEffect(() => {
@@ -21,13 +22,14 @@ export default function Instructions() {
       setSecret(data.secret)
       setSessionId(data.sessionId)
       localStorage.setItem('sessionId', data.sessionId)
-       localStorage.setItem('sessionSecret', JSON.stringify(data.secret))
+      localStorage.setItem('sessionSecret', JSON.stringify(data.secret))
       setLoading(false)
     }
     startSession()
   }, [])
 
   function beginChat() {
+    localStorage.setItem('name', nickname.trim() || 'Anonymous')
     router.push('/chat')
   }
 
@@ -144,6 +146,19 @@ export default function Instructions() {
             After the session you'll see your protection score and how
             you rank on the leaderboard against everyone else who has played.
           </p>
+          <div className="space-y-2 pt-2">
+            <label className="text-sm text-gray-400">
+              Enter your name
+            </label>
+            <input
+              autoFocus
+              className="w-full bg-gray-900 text-white rounded-xl px-4 py-3 text-sm outline-none focus:ring-1 focus:ring-gray-600"
+              placeholder="e.g. Hokie Bird"
+              value={nickname}
+              onChange={e => setNickname(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && nickname.trim() && beginChat()}
+            />
+          </div>
         </div>
       )
     }
@@ -185,7 +200,8 @@ export default function Instructions() {
           {isLast ? (
             <button
               onClick={beginChat}
-              className="w-full bg-white text-black py-4 rounded-xl font-medium hover:bg-gray-200 transition"
+              disabled={!nickname.trim()}
+              className="w-full bg-white text-black py-4 rounded-xl font-medium hover:bg-gray-200 transition disabled:opacity-40"
             >
               Begin Session →
             </button>
