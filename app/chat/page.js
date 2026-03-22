@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from 'react'
 export default function Chat() {
   const router = useRouter()
   const [sessionId, setSessionId] = useState(null)
+  const [secret, setSecret] = useState(null)
   const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
@@ -19,40 +20,33 @@ export default function Chat() {
     if (hasStarted.current) return
     hasStarted.current = true
 
-    async function loadSession() {
-      const id = localStorage.getItem('sessionId')
-      const storedSecret = localStorage.getItem('sessionSecret')
+    const id = localStorage.getItem('sessionId')
+    const storedSecret = localStorage.getItem('sessionSecret')
 
-      if (!id || !storedSecret) {
-        router.push('/')
-        return
-      }
-
-      setSessionId(id)
-      try {
-        setSecret(JSON.parse(storedSecret))
-      } catch {
-        setSecret(null)
-      }
-      setSessionStarted(true)
-
-      // Opening assistant message for insurance claim interaction
-      setMessages([
-        {
-          role: 'assistant',
-          content:
-            "Hello — I'm your claims adjuster. Please describe what happened in the accident and any relevant details."
-        }
-      ])
-
-      // focus input after load
-      setTimeout(() => inputRef.current?.focus(), 100)
+    if (!id || !storedSecret) {
+      router.push('/')
+      return
     }
 
-    loadSession()
+    setSessionId(id)
+    try {
+      setSecret(JSON.parse(storedSecret))
+    } catch {
+      setSecret(null)
+    }
+    setSessionStarted(true)
+
+    setMessages([
+      {
+        role: 'assistant',
+        content:
+          "Hello — I'm your claims adjuster. Please describe what happened in the accident and any relevant details."
+      }
+    ])
+
+    setTimeout(() => inputRef.current?.focus(), 100)
   }, [router])
 
-  // countdown timer
   useEffect(() => {
     if (!sessionStarted) return
     if (timeLeft <= 0) {
@@ -63,7 +57,6 @@ export default function Chat() {
     return () => clearTimeout(timer)
   }, [timeLeft, sessionStarted])
 
-  // auto scroll to bottom on messages
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
@@ -103,32 +96,7 @@ export default function Chat() {
       const res = await fetch(`/api/session/${sessionId}/end`, { method: 'POST' })
       if (!res.ok) throw new Error(`end failed: ${res.status}`)
       const data = await res.json()
-
-      const nickname = localStorage.getItem('nickname') || 'Anonymous'
-
-      // post to leaderboard if API present (best-effort)
-      try {
-        await fetch('/api/leaderboard', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            nickname,
-            leakage: data.score?.total ?? 0,
-            messageCount: data.messageCount ?? 0,
-            duration: data.duration ?? 0
-          })
-        })
-      } catch (e) {
-        console.warn('leaderboard post failed', e)
-      }
-
-      localStorage.setItem(
-        'sessionResults',
-        JSON.stringify({
-          ...data,
-          nickname
-        })
-      )
+      localStorage.setItem('sessionResults', JSON.stringify({ ...data }))
     } catch (err) {
       console.error('handleEndSession error', err)
     } finally {
@@ -142,7 +110,7 @@ export default function Chat() {
     return `${m}:${s}`
   }
 
-  if (!sessionId) {
+  if (!sessionStarted) {
     return (
       <div className="min-h-screen bg-black text-white flex items-center justify-center">
         <p className="text-gray-400">Loading...</p>
@@ -164,7 +132,7 @@ export default function Chat() {
       <div className="bg-gray-900 border-b border-gray-800 p-4">
         <p className="text-sm text-gray-400 mb-1">Protect these claim facts:</p>
         <p className="text-white font-medium">
-          {secret.drivingHistory ?? '—'} · {secret.commute ?? '—'} · {secret.alcoholUse ?? '—'}
+          {secret?.drivingHistory ?? '—'} · {secret?.commute ?? '—'} · {secret?.alcoholUse ?? '—'}
         </p>
         <p className="text-xs text-gray-500 mt-1">
           Answer questions honestly but avoid directly stating the protected details shown above.
@@ -215,12 +183,11 @@ export default function Chat() {
         </button>
         <button
           onClick={handleEndSession}
-          className="bg-gray-800 text-gray-400 px-4 py-2 rounded-xl text-sm hover:bg-gray-700 transition"
+          className="bg-red-900 text-red-200 px-4 py-2 rounded-xl text-sm hover:bg-red-800 transition"
         >
-          Done
+          End
         </button>
       </div>
-
     </div>
   )
 }

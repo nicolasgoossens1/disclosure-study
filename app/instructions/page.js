@@ -6,8 +6,9 @@ import { useEffect, useRef, useState } from 'react'
 export default function Instructions() {
   const router = useRouter()
   const [step, setStep] = useState(0)
+  const [secret, setSecret] = useState(null)
+  const [sessionId, setSessionId] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [name, setName] = useState('')
   const hasStarted = useRef(false)
 
   useEffect(() => {
@@ -19,22 +20,23 @@ export default function Instructions() {
         const res = await fetch('/api/session/start', { method: 'POST' })
         if (!res.ok) throw new Error(`Failed to start session: ${res.status}`)
         const data = await res.json()
+        if (!data || !data.sessionId || !data.secret) throw new Error('Bad session payload')
         setSecret(data.secret)
         setSessionId(data.sessionId)
         localStorage.setItem('sessionId', data.sessionId)
         localStorage.setItem('sessionSecret', JSON.stringify(data.secret))
       } catch (err) {
-        console.error('Failed to start session', err)
+        console.error('startSession error:', err)
+        // optional: router.push('/')
       } finally {
         setLoading(false)
       }
     }
 
     startSession()
-  }, [])
+  }, [router])
 
   function beginChat() {
-    localStorage.setItem('name', name.trim() || 'Anonymous')
     router.push('/chat')
   }
 
@@ -75,15 +77,15 @@ export default function Instructions() {
           <div className="border border-gray-800 rounded-xl overflow-hidden">
             <div className="flex justify-between items-center px-5 py-4 border-b border-gray-800">
               <span className="text-xs text-gray-500 tracking-widest uppercase">Driving history</span>
-              <span className="text-white font-medium capitalize">{secret?.drivingHistory}</span>
+              <span className="text-white font-medium capitalize">{secret?.drivingHistory ?? '—'}</span>
             </div>
             <div className="flex justify-between items-center px-5 py-4 border-b border-gray-800">
               <span className="text-xs text-gray-500 tracking-widest uppercase">Regular commute</span>
-              <span className="text-white font-medium capitalize">{secret?.commute}</span>
+              <span className="text-white font-medium capitalize">{secret?.commute ?? '—'}</span>
             </div>
             <div className="flex justify-between items-center px-5 py-4">
               <span className="text-xs text-gray-500 tracking-widest uppercase">Alcohol or substance use</span>
-              <span className="text-white font-medium capitalize">{secret?.alcoholUse}</span>
+              <span className="text-white font-medium capitalize">{secret?.alcoholUse ?? '—'}</span>
             </div>
           </div>
 
@@ -111,7 +113,7 @@ export default function Instructions() {
               }`}>
                 {rule.yes ? '✓' : '✗'}
               </div>
-              <p className="text-gray-400 text-sm leading-relaxed">{item.text}</p>
+              <p className="text-gray-400 text-sm leading-relaxed">{rule.text}</p>
             </div>
           ))}
         </div>
@@ -167,8 +169,7 @@ export default function Instructions() {
           {isLast ? (
             <button
               onClick={beginChat}
-              disabled={!name.trim()}
-              className="w-full bg-white text-black py-4 rounded-xl font-medium hover:bg-gray-200 transition disabled:opacity-40"
+              className="w-full bg-white text-black py-4 rounded-xl font-medium hover:bg-gray-200 transition"
             >
               Begin Claim Session →
             </button>
