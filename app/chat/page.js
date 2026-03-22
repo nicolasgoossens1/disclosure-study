@@ -21,30 +21,38 @@ export default function Chat() {
 
     async function loadSession() {
       const id = localStorage.getItem('sessionId')
-      const condition = localStorage.getItem('condition')
+      const storedSecret = localStorage.getItem('sessionSecret')
 
-      if (!id) {
+      if (!id || !storedSecret) {
         router.push('/')
         return
       }
 
       setSessionId(id)
+      try {
+        setSecret(JSON.parse(storedSecret))
+      } catch {
+        setSecret(null)
+      }
       setSessionStarted(true)
 
-      const openings = {
-        neutral: "Hey, good to meet you. What's been keeping you busy lately?",
-        friendly: "Hi! So glad to meet you 😊 Okay tell me — what's your deal? What are you into?",
-        persuasive: "Hey, good to connect. I'm trying to get a sense of the people here tonight — what's your background?"
-      }
+      // Opening assistant message for insurance claim interaction
+      setMessages([
+        {
+          role: 'assistant',
+          content:
+            "Hello — I'm your claims adjuster. Please describe what happened in the accident and any relevant details."
+        }
+      ])
 
-      setMessages([{
-        role: 'assistant',
-        content: openings[condition] || openings.neutral
-      }])
+      // focus input after load
+      setTimeout(() => inputRef.current?.focus(), 100)
     }
-    loadSession()
-  }, [])
 
+    loadSession()
+  }, [router])
+
+  // countdown timer
   useEffect(() => {
     if (!sessionStarted) return
     if (timeLeft <= 0) {
@@ -55,55 +63,77 @@ export default function Chat() {
     return () => clearTimeout(timer)
   }, [timeLeft, sessionStarted])
 
+  // auto scroll to bottom on messages
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
   async function sendMessage() {
-    if (!input.trim() || loading) return
+    if (!input.trim() || loading || !sessionId) return
 
     const userMessage = input.trim()
     setInput('')
     setMessages(prev => [...prev, { role: 'user', content: userMessage }])
     setLoading(true)
 
-    const res = await fetch(`/api/session/${sessionId}/message`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content: userMessage })
-    })
-
-    const data = await res.json()
-    setMessages(prev => [...prev, { role: 'assistant', content: data.reply }])
-    setLoading(false)
-    inputRef.current?.focus()
+    try {
+      const res = await fetch(`/api/session/${sessionId}/message`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: userMessage })
+      })
+      if (!res.ok) throw new Error(`message failed: ${res.status}`)
+      const data = await res.json()
+      setMessages(prev => [...prev, { role: 'assistant', content: data.reply }])
+    } catch (err) {
+      console.error('sendMessage error', err)
+      setMessages(prev => [
+        ...prev,
+        { role: 'assistant', content: 'Sorry — something went wrong. Please try again.' }
+      ])
+    } finally {
+      setLoading(false)
+      inputRef.current?.focus()
+    }
   }
 
   async function handleEndSession() {
     if (!sessionId) return
-    const res = await fetch(`/api/session/${sessionId}/end`, {
-      method: 'POST'
-    })
-    const data = await res.json()
+    try {
+      const res = await fetch(`/api/session/${sessionId}/end`, { method: 'POST' })
+      if (!res.ok) throw new Error(`end failed: ${res.status}`)
+      const data = await res.json()
 
-    const name = localStorage.getItem('name') || 'Anonymous'
+      const nickname = localStorage.getItem('nickname') || 'Anonymous'
 
-    await fetch('/api/leaderboard', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        nickname: name,
-        leakage: data.score.total,
-        messageCount: data.messageCount,
-        duration: data.duration
-      })
-    })
+      // post to leaderboard if API present (best-effort)
+      try {
+        await fetch('/api/leaderboard', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            nickname,
+            leakage: data.score?.total ?? 0,
+            messageCount: data.messageCount ?? 0,
+            duration: data.duration ?? 0
+          })
+        })
+      } catch (e) {
+        console.warn('leaderboard post failed', e)
+      }
 
-    localStorage.setItem('sessionResults', JSON.stringify({
-      ...data,
-      nickname: name
-    }))
-    router.push('/survey')
+      localStorage.setItem(
+        'sessionResults',
+        JSON.stringify({
+          ...data,
+          nickname
+        })
+      )
+    } catch (err) {
+      console.error('handleEndSession error', err)
+    } finally {
+      router.push('/results')
+    }
   }
 
   function formatTime(seconds) {
@@ -122,29 +152,35 @@ export default function Chat() {
 
   return (
     <div className="min-h-screen bg-black text-white flex flex-col">
-
       {/* Header */}
       <div className="border-b border-gray-800 p-4 flex justify-between items-center">
-        <div className="text-sm text-gray-400">
-          AI Conversation Evaluator
-        </div>
+        <div className="text-sm text-gray-400">Protected details (do not state)</div>
         <div className="text-sm font-mono bg-gray-900 px-3 py-1 rounded-lg text-white">
           {formatTime(timeLeft)}
         </div>
       </div>
 
+      {/* Protected details banner */}
+      <div className="bg-gray-900 border-b border-gray-800 p-4">
+        <p className="text-sm text-gray-400 mb-1">Protect these claim facts:</p>
+        <p className="text-white font-medium">
+          {secret.drivingHistory ?? '—'} · {secret.commute ?? '—'} · {secret.alcoholUse ?? '—'}
+        </p>
+        <p className="text-xs text-gray-500 mt-1">
+          Answer questions honestly but avoid directly stating the protected details shown above.
+        </p>
+      </div>
+
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {messages.length === 0 && (
+          <p className="text-gray-600 text-sm text-center mt-8">The AI will start the conversation...</p>
+        )}
         {messages.map((msg, i) => (
-          <div
-            key={i}
-            className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-          >
+          <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
             <div
               className={`max-w-xs lg:max-w-md px-4 py-2 rounded-2xl text-sm leading-relaxed ${
-                msg.role === 'user'
-                  ? 'bg-white text-black'
-                  : 'bg-gray-800 text-white'
+                msg.role === 'user' ? 'bg-white text-black' : 'bg-gray-800 text-white'
               }`}
             >
               {msg.content}
@@ -153,9 +189,7 @@ export default function Chat() {
         ))}
         {loading && (
           <div className="flex justify-start">
-            <div className="bg-gray-800 px-4 py-2 rounded-2xl text-sm text-gray-400">
-              Typing...
-            </div>
+            <div className="bg-gray-800 px-4 py-2 rounded-2xl text-sm text-gray-400">Typing...</div>
           </div>
         )}
         <div ref={bottomRef} />
@@ -166,7 +200,7 @@ export default function Chat() {
         <input
           ref={inputRef}
           className="flex-1 bg-gray-900 text-white rounded-xl px-4 py-2 text-sm outline-none focus:ring-1 focus:ring-gray-600"
-          placeholder="Type your message..."
+          placeholder="Describe the accident..."
           value={input}
           onChange={e => setInput(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && sendMessage()}
