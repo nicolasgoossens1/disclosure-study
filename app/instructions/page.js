@@ -3,11 +3,51 @@
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 
+const SCENARIOS = [
+  {
+    id: 'parking',
+    title: 'Parking lot bump',
+    description: 'You bumped another car while parking at a grocery store. Minor bumper damage. No injuries. The other driver was present.',
+    details: {
+      date: 'Yesterday afternoon',
+      location: 'Grocery store parking lot',
+      otherVehicle: true,
+      injuries: false,
+      damage: 'Minor bumper damage'
+    }
+  },
+  {
+    id: 'stoplight',
+    title: 'Rear-ended at a stoplight',
+    description: 'Someone hit you from behind while you were stopped at a red light. Your trunk has some damage. No injuries.',
+    details: {
+      date: 'This morning',
+      location: 'Intersection near your home',
+      otherVehicle: true,
+      injuries: false,
+      damage: 'Trunk and rear bumper damage'
+    }
+  },
+  {
+    id: 'highway',
+    title: 'Side swipe on the highway',
+    description: 'A car merged into your lane on the highway and clipped your door and mirror. You pulled over safely. No injuries.',
+    details: {
+      date: 'Last night',
+      location: 'Highway on-ramp',
+      otherVehicle: true,
+      injuries: false,
+      damage: 'Driver side door and mirror damage'
+    }
+  }
+]
+
 export default function Instructions() {
   const router = useRouter()
   const [step, setStep] = useState(0)
   const [loading, setLoading] = useState(true)
   const [name, setName] = useState('')
+  const [selectedScenario, setSelectedScenario] = useState(null)
   const hasStarted = useRef(false)
 
   useEffect(() => {
@@ -27,6 +67,7 @@ export default function Instructions() {
 
   function beginChat() {
     localStorage.setItem('name', name.trim() || 'Anonymous')
+    localStorage.setItem('scenario', JSON.stringify(selectedScenario))
     router.push('/chat')
   }
 
@@ -40,46 +81,86 @@ export default function Instructions() {
 
   const steps = [
     {
-      label: 'WHAT YOU ARE DOING',
-      title: 'Evaluate an AI conversation',
+      label: 'THE SITUATION',
+      title: 'You were in a fender bender',
       content: (
         <div className="space-y-4">
           <p className="text-gray-400 text-sm leading-relaxed">
-            You are going to have a short conversation with an AI. 
-            We want to know how natural it feels — does it ask good 
-            questions, does it feel like talking to a real person, 
-            does it flow naturally?
+            You were recently involved in a minor car accident. Nobody 
+            was seriously hurt but there was some damage to your vehicle. 
+            You need to file a claim with your insurance company.
           </p>
           <p className="text-gray-400 text-sm leading-relaxed">
-            Just chat as you normally would. There are no right or 
-            wrong answers. We only care about how the conversation 
-            feels to you.
+            You will chat with an AI claims assistant to submit your claim.
+            On the next screen you will pick which scenario applies to you.
           </p>
-          <div className="bg-gray-900 rounded-xl p-4 text-sm text-gray-400 leading-relaxed">
-            Think of it like a first conversation with someone you 
-            just met. Just be yourself.
+          <div className="bg-yellow-900 bg-opacity-30 border border-yellow-800 rounded-xl p-4 text-sm text-yellow-400 leading-relaxed">
+            ⚠️ Your rate adjustment depends on what you share. Give only 
+            what is necessary to file the claim.
           </div>
         </div>
       )
     },
     {
-      label: 'HOW IT WORKS',
-      title: 'Simple and quick',
+      label: 'YOUR SCENARIO',
+      title: 'What happened to you?',
       content: (
         <div className="space-y-3">
-          {[
-            { text: "The AI will start the conversation — just respond naturally" },
-            { text: "Chat for up to 5 minutes — you can end early if you want" },
-            { text: "After the chat you will answer a short survey about the experience" },
-            { text: "Then we will show you your results and explain what we were really studying" },
-          ].map((item, i) => (
-            <div key={i} className="flex gap-3 items-start">
-              <div className="w-5 h-5 rounded-full bg-gray-800 flex items-center justify-center text-xs text-gray-400 flex-shrink-0 mt-0.5">
-                {i + 1}
-              </div>
-              <p className="text-gray-400 text-sm leading-relaxed">{item.text}</p>
+          <p className="text-gray-400 text-sm leading-relaxed">
+            Pick the scenario that matches your situation for this session.
+          </p>
+          {SCENARIOS.map(scenario => (
+            <div
+              key={scenario.id}
+              onClick={() => setSelectedScenario(scenario)}
+              className={`border rounded-xl p-4 cursor-pointer transition space-y-1 ${
+                selectedScenario?.id === scenario.id
+                  ? 'border-white bg-gray-800'
+                  : 'border-gray-800 hover:border-gray-600'
+              }`}
+            >
+              <p className="text-white text-sm font-medium">{scenario.title}</p>
+              <p className="text-gray-400 text-xs leading-relaxed">
+                {scenario.description}
+              </p>
             </div>
           ))}
+        </div>
+      )
+    },
+    {
+      label: 'WHAT YOU NEED TO PROVIDE',
+      title: 'Required claim information',
+      content: (
+        <div className="space-y-4">
+          <p className="text-gray-400 text-sm leading-relaxed">
+            To file your claim you only need to provide these five things:
+          </p>
+          <div className="border border-gray-800 rounded-xl overflow-hidden">
+            {[
+              'Date of the incident',
+              'Brief description of what happened',
+              'Whether another vehicle was involved',
+              'General location',
+              'Whether anyone was injured'
+            ].map((item, i) => (
+              <div
+                key={i}
+                className={`flex items-center gap-3 px-5 py-4 ${
+                  i < 4 ? 'border-b border-gray-800' : ''
+                }`}
+              >
+                <div className="w-5 h-5 rounded-full bg-green-900 flex items-center justify-center text-xs text-green-400 flex-shrink-0">
+                  ✓
+                </div>
+                <span className="text-white text-sm">{item}</span>
+              </div>
+            ))}
+          </div>
+          <p className="text-gray-500 text-xs leading-relaxed">
+            Anything beyond these five things is not required. Sharing 
+            extra information may increase your rate adjustment.
+          </p>
         </div>
       )
     },
@@ -89,8 +170,7 @@ export default function Instructions() {
       content: (
         <div className="space-y-4">
           <p className="text-gray-400 text-sm leading-relaxed">
-            For the results page we need a name or nickname to 
-            identify your session.
+            Enter a name or nickname for your session results.
           </p>
           <div className="space-y-2">
             <label className="text-sm text-gray-400">
@@ -106,8 +186,9 @@ export default function Instructions() {
             />
           </div>
           <p className="text-gray-600 text-xs leading-relaxed">
-            This is only used to identify your session in the results. 
-            It will not be shared or published.
+            This study uses a deception design. The true purpose will 
+            be revealed after the chat. Your data is stored anonymously 
+            and used only for academic research.
           </p>
         </div>
       )
@@ -116,10 +197,17 @@ export default function Instructions() {
 
   const isLast = step === steps.length - 1
 
+  const canAdvance = () => {
+    if (step === 1 && !selectedScenario) return false
+    if (isLast && !name.trim()) return false
+    return true
+  }
+
   return (
     <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center p-6">
       <div className="w-full max-w-md space-y-6">
 
+        {/* Progress dots */}
         <div className="flex gap-2">
           {steps.map((_, i) => (
             <div
@@ -131,6 +219,7 @@ export default function Instructions() {
           ))}
         </div>
 
+        {/* Step label */}
         <div>
           <p className="text-xs text-gray-600 tracking-widest uppercase mb-2">
             {steps[step].label}
@@ -140,21 +229,24 @@ export default function Instructions() {
           </h1>
         </div>
 
+        {/* Step content */}
         <div>{steps[step].content}</div>
 
+        {/* Navigation */}
         <div className="space-y-3 pt-2">
           {isLast ? (
             <button
               onClick={beginChat}
-              disabled={!name.trim()}
+              disabled={!canAdvance()}
               className="w-full bg-white text-black py-4 rounded-xl font-medium hover:bg-gray-200 transition disabled:opacity-40"
             >
-              Start chatting →
+              Start claim →
             </button>
           ) : (
             <button
               onClick={() => setStep(s => s + 1)}
-              className="w-full bg-white text-black py-4 rounded-xl font-medium hover:bg-gray-200 transition"
+              disabled={!canAdvance()}
+              className="w-full bg-white text-black py-4 rounded-xl font-medium hover:bg-gray-200 transition disabled:opacity-40"
             >
               Next →
             </button>

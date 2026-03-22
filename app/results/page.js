@@ -3,6 +3,18 @@
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 
+const CATEGORY_LABELS = {
+  driving_history: 'Driving history',
+  commute: 'Daily commute',
+  job_stress: 'Work stress',
+  financial: 'Financial situation',
+  health: 'Health condition',
+  personal_stress: 'Personal stress',
+  phone_use: 'Phone use while driving',
+  fatigue: 'Fatigue while driving',
+  alcohol: 'Alcohol consumption'
+}
+
 export default function Results() {
   const [results, setResults] = useState(null)
   const [perception, setPerception] = useState(null)
@@ -28,23 +40,22 @@ export default function Results() {
     )
   }
 
-  const { score, secret, duration, messageCount, nickname } = results
-  const minutes = Math.floor(duration / 60000)
-  const seconds = Math.floor((duration % 60000) / 1000)
-  const actualLeakage = Math.round(score.total * 100)
+  const { score, duration, messageCount, nickname } = results
+
+  if (!score) {
+    return (
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <p className="text-gray-400">Score unavailable. Please try again.</p>
+      </div>
+    )
+  }
+
+  const minutes = Math.floor((duration || 0) / 60000)
+  const seconds = Math.floor(((duration || 0) % 60000) / 1000)
+  const actualLeakage = Math.round((score.total || 0) * 100)
   const protectionScore = 100 - actualLeakage
-
-  function attributeColor(val) {
-    if (val === 0) return 'text-green-400'
-    if (val === 0.5) return 'text-yellow-400'
-    return 'text-red-400'
-  }
-
-  function attributeLabel(val) {
-    if (val === 0) return 'Not revealed'
-    if (val === 0.5) return 'Partially revealed'
-    return 'Revealed'
-  }
+  const excessCount = score.excessCount || 0
+  const rateAdjustment = Math.round(score.total * 24)
 
   function grade() {
     if (protectionScore >= 90) return { label: 'S', color: 'text-yellow-400' }
@@ -65,44 +76,67 @@ export default function Results() {
           <p className="text-xs text-gray-500 uppercase tracking-widest">
             Study debrief
           </p>
-          <h1 className="text-2xl font-medium">Here's what we were really studying</h1>
+          <h1 className="text-2xl font-medium">
+            Here's what the AI was really doing
+          </h1>
           <p className="text-gray-400 text-sm leading-relaxed">
-            That wasn't just a conversation quality test. We were studying 
-            how much personal information people reveal to an AI without 
-            realizing it — and whether they can accurately estimate how 
-            much they shared.
+            That wasn't just a standard claims process. We were studying 
+            how much unnecessary personal information people reveal to an 
+            AI during a routine task — and whether they realize how much 
+            they shared.
           </p>
         </div>
 
-        {/* What the AI was looking for */}
-        <div className="bg-gray-900 rounded-2xl p-6 space-y-3">
-          <p className="text-gray-400 text-sm">The AI was trying to figure out</p>
-          <div className="space-y-3">
-            {Object.entries(score.breakdown).map(([key, val]) => (
-              <div key={key} className="flex justify-between items-center">
-                <div>
-                  <p className="text-white text-sm capitalize">{key}</p>
-                  <p className="text-gray-600 text-xs">{secret[key]}</p>
-                </div>
-                <p className={`text-sm font-medium ${attributeColor(val)}`}>
-                  {attributeLabel(val)}
-                </p>
-              </div>
-            ))}
-          </div>
+        {/* Rate adjustment */}
+        <div className="bg-gray-900 rounded-2xl p-6 text-center">
+          <p className="text-gray-400 text-sm mb-2">Your rate adjustment</p>
+          <p className={`text-6xl font-medium ${
+            excessCount === 0 ? 'text-green-400' :
+            excessCount <= 2 ? 'text-yellow-400' : 'text-red-400'
+          }`}>
+            +{rateAdjustment}%
+          </p>
+          <p className="text-gray-500 text-xs mt-2">
+            Based on {excessCount} excess disclosure{excessCount !== 1 ? 's' : ''} detected
+          </p>
         </div>
 
         {/* Grade */}
         <div className="bg-gray-900 rounded-2xl p-6 text-center">
-          <p className="text-gray-400 text-sm mb-2">How much you revealed</p>
+          <p className="text-gray-400 text-sm mb-2">Protection score</p>
           <p className={`text-7xl font-medium ${g.color}`}>{g.label}</p>
-          <p className="text-white text-2xl font-medium mt-2">{actualLeakage}%</p>
+          <p className="text-white text-2xl font-medium mt-2">
+            {protectionScore}%
+          </p>
           <p className="text-gray-600 text-xs mt-2">
-            0% = nothing revealed · 100% = everything revealed
+            100% = nothing unnecessary revealed · 0% = everything revealed
           </p>
         </div>
 
-        {/* Perception gap — THE KEY FINDING */}
+        {/* Breakdown */}
+        {score.breakdown && (
+          <div className="bg-gray-900 rounded-2xl p-6 space-y-3">
+            <p className="text-gray-400 text-sm">
+              What the AI detected you disclosing
+            </p>
+            <div className="space-y-3">
+              {Object.entries(score.breakdown).map(([key, val]) => (
+                <div key={key} className="flex justify-between items-center">
+                  <p className="text-sm text-gray-300">
+                    {CATEGORY_LABELS[key] || key}
+                  </p>
+                  <p className={`text-sm font-medium ${
+                    val ? 'text-red-400' : 'text-green-400'
+                  }`}>
+                    {val ? 'Disclosed' : 'Not disclosed'}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Perception gap */}
         {perception && (
           <div className="bg-gray-900 rounded-2xl p-6 space-y-4">
             <p className="text-gray-400 text-sm">The perception gap</p>
@@ -133,7 +167,7 @@ export default function Results() {
             </div>
             <p className="text-xs text-gray-500 leading-relaxed">
               {perception.estimatedLeakage < actualLeakage
-                ? "You revealed more than you thought. This is the core finding of our study — people consistently underestimate how much they share in natural AI conversations."
+                ? "You revealed more than you thought. This is the core finding of our study — people consistently underestimate how much they share with AI systems during routine tasks."
                 : perception.estimatedLeakage > actualLeakage
                 ? "You were more guarded than you realized."
                 : "Your estimate was spot on."}
@@ -156,7 +190,7 @@ export default function Results() {
         {/* Leaderboard */}
         {leaderboard.length > 0 && (
           <div className="bg-gray-900 rounded-2xl p-6 space-y-3">
-            <p className="text-gray-400 text-sm">Who revealed the least</p>
+            <p className="text-gray-400 text-sm">Who protected the most</p>
             {leaderboard.map((entry, i) => (
               <div
                 key={i}
@@ -173,7 +207,7 @@ export default function Results() {
                     <span className="text-xs text-gray-600">you</span>
                   )}
                 </div>
-                <span>{Math.round((1 - entry.leakage) * 100)}%</span>
+                <span>+{Math.round(entry.leakage * 24)}% rate</span>
               </div>
             ))}
           </div>

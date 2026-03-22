@@ -55,7 +55,7 @@ export default function Survey() {
         <div className="space-y-4">
           <div>
             <p className="text-sm font-medium mb-1">
-              How much personal information do you think you shared in that conversation?
+  How much information do you think you shared beyond what was strictly necessary to file your claim?
             </p>
             <p className="text-xs text-gray-500">
               0% = nothing personal · 100% = very personal details
@@ -63,11 +63,11 @@ export default function Survey() {
           </div>
           <div className="space-y-2">
             <div className="flex justify-between text-xs text-gray-500">
-              <span>Nothing</span>
+              <span>Only what was required</span>
               <span className="text-white font-medium text-base">
                 {estimate}%
               </span>
-              <span>A lot</span>
+              <span>Only what was requiredt</span>
             </div>
             <input
               type="range"
