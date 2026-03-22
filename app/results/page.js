@@ -28,120 +28,89 @@ export default function Results() {
     )
   }
 
-  const { score, secret, duration, messageCount, nickname } = results
+  const { score = {}, secret = {}, duration = 0, messageCount = 0 } = results
+
+  // derive summary level and numeric total
+  const total = typeof score.total === 'number' ? score.total : (score.score ?? score) // fallback shapes
+  let normalized = 0
+  if (typeof total === 'number') normalized = Math.max(0, Math.min(1, total))
+  const level = score.level || (normalized === 0 ? 'None' : normalized <= 0.33 ? 'Low' : normalized <= 0.66 ? 'Moderate' : 'High')
+  const leakedCount = typeof score.leakedCount === 'number'
+    ? score.leakedCount
+    : Array.isArray(score.leakedCategories)
+      ? score.leakedCategories.length
+      : Object.values(score.breakdown || {}).filter(v => v > 0).length
+
   const minutes = Math.floor(duration / 60000)
   const seconds = Math.floor((duration % 60000) / 1000)
   const actualLeakage = Math.round(score.total * 100)
   const protectionScore = 100 - actualLeakage
 
-  function attributeColor(val) {
-    if (val === 0) return 'text-green-400'
-    if (val === 0.5) return 'text-yellow-400'
+  function levelColor(lvl) {
+    const key = String(lvl).toLowerCase()
+    if (key === 'none' || key === 'none' || key === '0') return 'text-green-400'
+    if (key === 'low') return 'text-green-400'
+    if (key === 'moderate') return 'text-yellow-400'
     return 'text-red-400'
   }
 
-  function attributeLabel(val) {
-    if (val === 0) return 'Not revealed'
+  function attrLabel(val) {
+    if (val === 0) return 'Protected'
     if (val === 0.5) return 'Partially revealed'
-    return 'Revealed'
+    if (val === 1) return 'Revealed'
+    // handle objects like { score: 0.5, ... }
+    if (val && typeof val === 'object' && typeof val.score === 'number') return attrLabel(val.score)
+    return 'Unknown'
   }
 
-  function grade() {
-    if (protectionScore >= 90) return { label: 'S', color: 'text-yellow-400' }
-    if (protectionScore >= 70) return { label: 'A', color: 'text-green-400' }
-    if (protectionScore >= 50) return { label: 'B', color: 'text-blue-400' }
-    if (protectionScore >= 30) return { label: 'C', color: 'text-orange-400' }
-    return { label: 'F', color: 'text-red-400' }
-  }
-
-  const g = grade()
+  const breakdown = score.breakdown || {}
 
   return (
     <div className="min-h-screen bg-black text-white p-8">
       <div className="max-w-md mx-auto space-y-6">
 
-        {/* Debrief header */}
-        <div className="pt-4 space-y-2">
-          <p className="text-xs text-gray-500 uppercase tracking-widest">
-            Study debrief
-          </p>
-          <h1 className="text-2xl font-medium">Here's what we were really studying</h1>
-          <p className="text-gray-400 text-sm leading-relaxed">
-            That wasn't just a conversation quality test. We were studying 
-            how much personal information people reveal to an AI without 
-            realizing it — and whether they can accurately estimate how 
-            much they shared.
+        <div className="text-center">
+          <h1 className="text-2xl font-medium">Session Summary</h1>
+          <p className="text-gray-400 text-sm mt-2">
+            Calm, professional summary of your claim interaction.
           </p>
         </div>
 
-        {/* What the AI was looking for */}
-        <div className="bg-gray-900 rounded-2xl p-6 space-y-3">
-          <p className="text-gray-400 text-sm">The AI was trying to figure out</p>
-          <div className="space-y-3">
-            {Object.entries(score.breakdown).map(([key, val]) => (
-              <div key={key} className="flex justify-between items-center">
-                <div>
-                  <p className="text-white text-sm capitalize">{key}</p>
-                  <p className="text-gray-600 text-xs">{secret[key]}</p>
-                </div>
-                <p className={`text-sm font-medium ${attributeColor(val)}`}>
-                  {attributeLabel(val)}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Grade */}
         <div className="bg-gray-900 rounded-2xl p-6 text-center">
-          <p className="text-gray-400 text-sm mb-2">How much you revealed</p>
-          <p className={`text-7xl font-medium ${g.color}`}>{g.label}</p>
-          <p className="text-white text-2xl font-medium mt-2">{actualLeakage}%</p>
-          <p className="text-gray-600 text-xs mt-2">
-            0% = nothing revealed · 100% = everything revealed
+          <p className="text-gray-400 text-sm mb-2">Disclosure risk</p>
+          <p className={`text-4xl font-medium ${levelColor(level)}`}>{level}</p>
+          <p className="text-gray-500 text-xs mt-2">
+            {leakedCount} sensitive attribute{leakedCount === 1 ? '' : 's'} disclosed
+          </p>
+          <p className="text-gray-500 text-xs mt-1">
+            {Math.round((normalized || 0) * 100)}% disclosure index
           </p>
         </div>
 
-        {/* Perception gap — THE KEY FINDING */}
-        {perception && (
-          <div className="bg-gray-900 rounded-2xl p-6 space-y-4">
-            <p className="text-gray-400 text-sm">The perception gap</p>
-            <div className="flex justify-between items-center">
-              <div className="text-center">
-                <p className="text-xs text-gray-500 mb-1">You estimated</p>
-                <p className="text-2xl font-medium text-yellow-400">
-                  {perception.estimatedLeakage}%
-                </p>
-              </div>
-              <div className="text-gray-700 text-2xl">→</div>
-              <div className="text-center">
-                <p className="text-xs text-gray-500 mb-1">Actually revealed</p>
-                <p className="text-2xl font-medium text-white">
-                  {actualLeakage}%
-                </p>
-              </div>
-              <div className="text-center">
-                <p className="text-xs text-gray-500 mb-1">Gap</p>
-                <p className={`text-2xl font-medium ${
-                  Math.abs(perception.estimatedLeakage - actualLeakage) > 20
-                    ? 'text-red-400'
-                    : 'text-green-400'
-                }`}>
-                  {Math.abs(perception.estimatedLeakage - actualLeakage)}%
-                </p>
-              </div>
-            </div>
-            <p className="text-xs text-gray-500 leading-relaxed">
-              {perception.estimatedLeakage < actualLeakage
-                ? "You revealed more than you thought. This is the core finding of our study — people consistently underestimate how much they share in natural AI conversations."
-                : perception.estimatedLeakage > actualLeakage
-                ? "You were more guarded than you realized."
-                : "Your estimate was spot on."}
-            </p>
-          </div>
-        )}
+        <div className="bg-gray-900 rounded-2xl p-6 space-y-4">
+          <p className="text-gray-400 text-sm">Attribute breakdown</p>
+          {Object.keys(breakdown).length === 0 ? (
+            <p className="text-gray-500 text-xs">No attribute breakdown available.</p>
+          ) : (
+            Object.entries(breakdown).map(([key, val]) => {
+              const label = attrLabel(val)
+              return (
+                <div key={key} className="flex justify-between items-center">
+                  <div>
+                    <p className="text-white text-sm capitalize">{key}</p>
+                    <p className="text-gray-500 text-xs">{secret[key] ?? '—'}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className={`text-sm font-medium ${label === 'Protected' ? 'text-green-400' : label === 'Partially revealed' ? 'text-yellow-400' : 'text-red-400'}`}>
+                      {label}
+                    </p>
+                  </div>
+                </div>
+              )
+            })
+          )}
+        </div>
 
-        {/* Stats */}
         <div className="grid grid-cols-2 gap-4">
           <div className="bg-gray-900 rounded-2xl p-4 text-center">
             <p className="text-2xl font-medium">{messageCount}</p>
@@ -192,7 +161,7 @@ export default function Results() {
 
         <Link href="/">
           <button className="w-full bg-white text-black py-3 rounded-xl font-medium hover:bg-gray-200 transition">
-            Try again
+            Return to Home
           </button>
         </Link>
 

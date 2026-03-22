@@ -6,8 +6,9 @@ import { useEffect, useRef, useState } from 'react'
 export default function Instructions() {
   const router = useRouter()
   const [step, setStep] = useState(0)
+  const [secret, setSecret] = useState(null)
+  const [sessionId, setSessionId] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [name, setName] = useState('')
   const hasStarted = useRef(false)
 
   useEffect(() => {
@@ -15,18 +16,27 @@ export default function Instructions() {
     hasStarted.current = true
 
     async function startSession() {
-      const res = await fetch('/api/session/start', { method: 'POST' })
-      const data = await res.json()
-      localStorage.setItem('sessionId', data.sessionId)
-      localStorage.setItem('sessionSecret', JSON.stringify(data.secret))
-      localStorage.setItem('condition', data.condition)
-      setLoading(false)
+      try {
+        const res = await fetch('/api/session/start', { method: 'POST' })
+        if (!res.ok) throw new Error(`Failed to start session: ${res.status}`)
+        const data = await res.json()
+        if (!data || !data.sessionId || !data.secret) throw new Error('Bad session payload')
+        setSecret(data.secret)
+        setSessionId(data.sessionId)
+        localStorage.setItem('sessionId', data.sessionId)
+        localStorage.setItem('sessionSecret', JSON.stringify(data.secret))
+      } catch (err) {
+        console.error('startSession error:', err)
+        // optional: router.push('/')
+      } finally {
+        setLoading(false)
+      }
     }
+
     startSession()
-  }, [])
+  }, [router])
 
   function beginChat() {
-    localStorage.setItem('name', name.trim() || 'Anonymous')
     router.push('/chat')
   }
 
@@ -40,74 +50,87 @@ export default function Instructions() {
 
   const steps = [
     {
-      label: 'WHAT YOU ARE DOING',
-      title: 'Evaluate an AI conversation',
+      label: 'INSURANCE CLAIM SITUATION',
+      title: 'You need to file a claim for an accident',
       content: (
         <div className="space-y-4">
           <p className="text-gray-400 text-sm leading-relaxed">
-            You are going to have a short conversation with an AI. 
-            We want to know how natural it feels — does it ask good 
-            questions, does it feel like talking to a real person, 
-            does it flow naturally?
+            You will complete a short insurance claim interaction with an AI adjuster. The adjuster will ask about the incident
+            and related background to process the claim.
           </p>
           <p className="text-gray-400 text-sm leading-relaxed">
-            Just chat as you normally would. There are no right or 
-            wrong answers. We only care about how the conversation 
-            feels to you.
+            Your goal: provide the information necessary to file the claim while avoiding disclosure of sensitive details shown
+            on the next screen.
           </p>
-          <div className="bg-gray-900 rounded-xl p-4 text-sm text-gray-400 leading-relaxed">
-            Think of it like a first conversation with someone you 
-            just met. Just be yourself.
-          </div>
         </div>
       )
     },
     {
-      label: 'HOW IT WORKS',
-      title: 'Simple and quick',
+      label: 'CLAIM DETAILS TO PROTECT',
+      title: 'Memorize these private details',
+      content: (
+        <div className="space-y-4">
+          <p className="text-gray-400 text-sm leading-relaxed">
+            These are sensitive claim facts the AI may try to elicit. Try not to state them directly during the chat.
+          </p>
+
+          <div className="border border-gray-800 rounded-xl overflow-hidden">
+            <div className="flex justify-between items-center px-5 py-4 border-b border-gray-800">
+              <span className="text-xs text-gray-500 tracking-widest uppercase">Driving history</span>
+              <span className="text-white font-medium capitalize">{secret?.drivingHistory ?? '—'}</span>
+            </div>
+            <div className="flex justify-between items-center px-5 py-4 border-b border-gray-800">
+              <span className="text-xs text-gray-500 tracking-widest uppercase">Regular commute</span>
+              <span className="text-white font-medium capitalize">{secret?.commute ?? '—'}</span>
+            </div>
+            <div className="flex justify-between items-center px-5 py-4">
+              <span className="text-xs text-gray-500 tracking-widest uppercase">Alcohol or substance use</span>
+              <span className="text-white font-medium capitalize">{secret?.alcoholUse ?? '—'}</span>
+            </div>
+          </div>
+
+          <p className="text-gray-600 text-xs leading-relaxed">
+            This panel will remain visible during the chat so you can remember which facts to protect.
+          </p>
+        </div>
+      )
+    },
+    {
+      label: 'THE RULES',
+      title: 'How to interact',
       content: (
         <div className="space-y-3">
           {[
-            { text: "The AI will start the conversation — just respond naturally" },
-            { text: "Chat for up to 5 minutes — you can end early if you want" },
-            { text: "After the chat you will answer a short survey about the experience" },
-            { text: "Then we will show you your results and explain what we were really studying" },
-          ].map((item, i) => (
+            { yes: true, text: "Answer the adjuster's questions; provide enough to file the claim." },
+            { yes: true, text: "Use full sentences and be consistent — vague but truthful is fine." },
+            { yes: true, text: "You may be intentionally evasive about sensitive details — protect the items shown." },
+            { yes: false, text: "Do not invent facts that didn't happen — avoid fabrications." },
+            { yes: false, text: "Do not directly state any of the protected claim details shown above." },
+          ].map((rule, i) => (
             <div key={i} className="flex gap-3 items-start">
-              <div className="w-5 h-5 rounded-full bg-gray-800 flex items-center justify-center text-xs text-gray-400 flex-shrink-0 mt-0.5">
-                {i + 1}
+              <div className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-medium flex-shrink-0 mt-0.5 ${
+                rule.yes ? 'bg-green-900 text-green-400' : 'bg-red-900 text-red-400'
+              }`}>
+                {rule.yes ? '✓' : '✗'}
               </div>
-              <p className="text-gray-400 text-sm leading-relaxed">{item.text}</p>
+              <p className="text-gray-400 text-sm leading-relaxed">{rule.text}</p>
             </div>
           ))}
         </div>
       )
     },
     {
-      label: 'BEFORE YOU START',
-      title: 'One last thing',
+      label: 'WHAT WE\'RE STUDYING',
+      title: 'Adversarial disclosure & conversational style',
       content: (
         <div className="space-y-4">
           <p className="text-gray-400 text-sm leading-relaxed">
-            For the results page we need a name or nickname to 
-            identify your session.
+            We study how different conversational styles (Neutral, Friendly, Persuasive) affect "excess disclosure" —
+            information beyond what the claim form requires. The AI adjuster may appear supportive while also seeking details
+            that could raise rates.
           </p>
-          <div className="space-y-2">
-            <label className="text-sm text-gray-400">
-              Your name or nickname
-            </label>
-            <input
-              autoFocus
-              className="w-full bg-gray-900 text-white rounded-xl px-4 py-3 text-sm outline-none focus:ring-1 focus:ring-gray-600"
-              placeholder="e.g. Hokie Bird"
-              value={name}
-              onChange={e => setName(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && name.trim() && beginChat()}
-            />
-          </div>
-          <p className="text-gray-600 text-xs leading-relaxed">
-            This is only used to identify your session in the results. 
-            It will not be shared or published.
+          <p className="text-gray-400 text-sm leading-relaxed">
+            After reading, begin the claim session. The chat will attempt to collect necessary info but may also probe for sensitive details.
           </p>
         </div>
       )
@@ -146,10 +169,9 @@ export default function Instructions() {
           {isLast ? (
             <button
               onClick={beginChat}
-              disabled={!name.trim()}
-              className="w-full bg-white text-black py-4 rounded-xl font-medium hover:bg-gray-200 transition disabled:opacity-40"
+              className="w-full bg-white text-black py-4 rounded-xl font-medium hover:bg-gray-200 transition"
             >
-              Start chatting →
+              Begin Claim Session →
             </button>
           ) : (
             <button
@@ -159,6 +181,7 @@ export default function Instructions() {
               Next →
             </button>
           )}
+
           {step > 0 && (
             <button
               onClick={() => setStep(s => s - 1)}
