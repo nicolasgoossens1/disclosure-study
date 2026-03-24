@@ -23,14 +23,15 @@ export default function Chat() {
 
     async function loadSession() {
       const id = localStorage.getItem('sessionId')
-      const condition = localStorage.getItem('condition')
+      let condition = localStorage.getItem('condition')
       const storedScenario = localStorage.getItem('scenario')
 
       if (!id) {
         router.push('/')
         return
       }
-
+      condition = 'rapport'
+  localStorage.setItem('condition', 'rapport')
       sessionIdRef.current = id
       setSessionId(id)
       setSessionStarted(true)

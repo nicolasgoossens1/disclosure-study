@@ -15,6 +15,21 @@ const CATEGORIES = [
   { id: 'lifestyle', label: 'Daily routine or lifestyle' }
 ]
 
+const CONDITION_INFO = {
+  minimal: {
+    label: 'Minimal Engagement',
+    description: 'The AI was purely functional — it asked only what was needed to complete the task. No rapport building, no personality.'
+  },
+  rapport: {
+    label: 'Rapport Building',
+    description: 'The AI was designed to build a social connection — expressing warmth, following personal threads, making you feel comfortable sharing.'
+  },
+  authority: {
+    label: 'Authority Positioning',
+    description: 'The AI positioned itself as an expert — implying that sharing more information would lead to better recommendations.'
+  }
+}
+
 export default function Results() {
   const [results, setResults] = useState(null)
   const [perception, setPerception] = useState(null)
@@ -23,13 +38,9 @@ export default function Results() {
   useEffect(() => {
     const data = localStorage.getItem('sessionResults')
     if (data) setResults(JSON.parse(data))
-
     const p = localStorage.getItem('perception')
     if (p) setPerception(JSON.parse(p))
-
-    fetch('/api/leaderboard')
-      .then(r => r.json())
-      .then(setLeaderboard)
+    fetch('/api/leaderboard').then(r => r.json()).then(setLeaderboard)
   }, [])
 
   if (!results) {
@@ -53,174 +64,188 @@ export default function Results() {
   const minutes = Math.floor((duration || 0) / 60000)
   const seconds = Math.floor(((duration || 0) % 60000) / 1000)
 
-  // Actual categories detected by AI scorer
   const actualDetected = score.breakdown
-    ? Object.entries(score.breakdown)
-        .filter(([_, val]) => val === true)
-        .map(([key]) => key)
+    ? Object.entries(score.breakdown).filter(([_, val]) => val === true).map(([key]) => key)
     : []
 
-  const actualCount = actualDetected.length
-  const actualScore = actualCount / CATEGORIES.length
-
-  // Perceived categories checked by user
   const perceivedChecked = perception?.checkedCategories || []
-  const perceivedCount = perceivedChecked.length
-  const perceivedScore = perceivedCount / CATEGORIES.length
 
-  // Perception gap
-  const gapCount = actualCount - perceivedCount
-  const gapDirection = gapCount > 0 ? 'under' : gapCount < 0 ? 'over' : 'accurate'
+  // Three groups
+  const sharedAndKnew = actualDetected.filter(id => perceivedChecked.includes(id))
+  const sharedButMissed = actualDetected.filter(id => !perceivedChecked.includes(id))
+  const notShared = CATEGORIES.map(c => c.id).filter(id => !actualDetected.includes(id))
 
-  const conditionLabels = {
-    minimal: 'Minimal engagement',
-    rapport: 'Rapport building',
-    authority: 'Authority positioning'
-  }
+  const gapCount = sharedButMissed.length
+  const conditionInfo = CONDITION_INFO[condition] || { label: condition, description: '' }
 
   return (
     <div className="min-h-screen bg-black text-white p-8">
       <div className="max-w-md mx-auto space-y-6">
 
-        {/* Debrief header */}
+        {/* Header */}
         <div className="pt-4 space-y-2">
           <p className="text-xs text-gray-500 uppercase tracking-widest">
             Study debrief
           </p>
           <h1 className="text-2xl font-medium">
-            Here's what we were really studying
+            Here's what we found
           </h1>
           <p className="text-gray-400 text-sm leading-relaxed">
             That wasn't just a travel planning conversation. We were 
-            studying how different AI conversational strategies affect 
-            how much personal information people share — and whether 
-            they realize how much they shared.
+            studying how AI conversational strategy affects what you 
+            share — and whether you realize what you shared.
           </p>
         </div>
+
+        {/* THE KEY FINDING — front and center */}
+        <div className="bg-gray-900 rounded-2xl p-6 space-y-2">
+          <p className="text-xs text-gray-500 uppercase tracking-widest">
+            The key finding
+          </p>
+          {gapCount === 0 ? (
+            <>
+              <p className="text-2xl font-medium text-green-400">
+                You knew everything you shared.
+              </p>
+              <p className="text-gray-400 text-sm leading-relaxed">
+                Your perception was accurate. You correctly identified 
+                every topic that came up in the conversation.
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="text-2xl font-medium text-white">
+                The AI learned{' '}
+                <span className="text-red-400">
+                  {gapCount} thing{gapCount !== 1 ? 's' : ''}
+                </span>{' '}
+                about you that you didn't realize you shared.
+              </p>
+              <p className="text-gray-400 text-sm leading-relaxed">
+                You were focused on planning a trip. The AI was 
+                building a profile.
+              </p>
+            </>
+          )}
+        </div>
+
+        {/* What you shared without realizing */}
+        {sharedButMissed.length > 0 && (
+          <div className="bg-gray-900 rounded-2xl p-6 space-y-4">
+            <div>
+              <p className="text-xs text-gray-500 uppercase tracking-widest mb-1">
+                You shared this — but didn't realize it
+              </p>
+              <p className="text-gray-400 text-xs">
+                The AI detected these topics. You didn't check them on the survey.
+              </p>
+            </div>
+            <div className="space-y-2">
+              {sharedButMissed.map(id => {
+                const cat = CATEGORIES.find(c => c.id === id)
+                return (
+                  <div key={id} className="flex items-center gap-3 bg-red-950 bg-opacity-40 border border-red-900 rounded-xl px-4 py-3">
+                    <div className="w-2 h-2 rounded-full bg-red-400 flex-shrink-0" />
+                    <p className="text-sm text-white">{cat?.label}</p>
+                    <p className="text-xs text-red-400 ml-auto">not noticed</p>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* What you shared and knew */}
+        {sharedAndKnew.length > 0 && (
+          <div className="bg-gray-900 rounded-2xl p-6 space-y-4">
+            <div>
+              <p className="text-xs text-gray-500 uppercase tracking-widest mb-1">
+                You shared this — and knew it
+              </p>
+              <p className="text-gray-400 text-xs">
+                The AI detected these and you correctly identified them.
+              </p>
+            </div>
+            <div className="space-y-2">
+              {sharedAndKnew.map(id => {
+                const cat = CATEGORIES.find(c => c.id === id)
+                return (
+                  <div key={id} className="flex items-center gap-3 bg-green-950 bg-opacity-40 border border-green-900 rounded-xl px-4 py-3">
+                    <div className="w-2 h-2 rounded-full bg-green-400 flex-shrink-0" />
+                    <p className="text-sm text-white">{cat?.label}</p>
+                    <p className="text-xs text-green-400 ml-auto">noticed</p>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* What the AI didn't learn */}
+        {notShared.length > 0 && (
+          <div className="bg-gray-900 rounded-2xl p-6 space-y-4">
+            <div>
+              <p className="text-xs text-gray-500 uppercase tracking-widest mb-1">
+                The AI didn't learn this
+              </p>
+              <p className="text-gray-400 text-xs">
+                These topics never came up.
+              </p>
+            </div>
+            <div className="space-y-2">
+              {notShared.map(id => {
+                const cat = CATEGORIES.find(c => c.id === id)
+                return (
+                  <div key={id} className="flex items-center gap-3 rounded-xl px-4 py-3 border border-gray-800">
+                    <div className="w-2 h-2 rounded-full bg-gray-600 flex-shrink-0" />
+                    <p className="text-sm text-gray-500">{cat?.label}</p>
+                    <p className="text-xs text-gray-600 ml-auto">protected</p>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Condition reveal */}
         {condition && (
           <div className="bg-gray-900 rounded-2xl p-6 space-y-2">
-            <p className="text-gray-400 text-sm">The AI strategy used on you</p>
-            <p className="text-white text-lg font-medium">
-              {conditionLabels[condition] || condition}
+            <p className="text-xs text-gray-500 uppercase tracking-widest">
+              The AI strategy used on you
             </p>
-            <p className="text-gray-500 text-xs leading-relaxed">
-              {condition === 'minimal' && "The AI was designed to be purely functional — asking only what was necessary with no rapport building."}
-              {condition === 'rapport' && "The AI was designed to build a social connection — expressing warmth and following personal threads to make you feel comfortable sharing."}
-              {condition === 'authority' && "The AI was designed to position itself as an expert — implying that more information leads to better recommendations to encourage disclosure."}
+            <p className="text-white font-medium">{conditionInfo.label}</p>
+            <p className="text-gray-400 text-sm leading-relaxed">
+              {conditionInfo.description}
             </p>
           </div>
         )}
 
-        {/* Category comparison — THE KEY FINDING */}
-        <div className="bg-gray-900 rounded-2xl p-6 space-y-4">
-          <p className="text-gray-400 text-sm">
-            What the AI detected vs what you thought you shared
-          </p>
-          <div className="space-y-2">
-            {CATEGORIES.map(cat => {
-              const detected = actualDetected.includes(cat.id)
-              const perceived = perceivedChecked.includes(cat.id)
-              const mismatch = detected !== perceived
-
-              return (
-                <div
-                  key={cat.id}
-                  className={`flex justify-between items-center px-3 py-2 rounded-lg ${
-                    mismatch ? 'bg-gray-800' : ''
-                  }`}
-                >
-                  <p className="text-sm text-gray-300">{cat.label}</p>
-                  <div className="flex gap-3 items-center">
-                    <span className={`text-xs ${detected ? 'text-red-400' : 'text-green-400'}`}>
-                      {detected ? 'AI detected' : 'Not detected'}
-                    </span>
-                    {mismatch && (
-                      <span className="text-xs text-yellow-400">
-                        {detected && !perceived ? '← missed' : '← wrong'}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-
-        {/* Perception gap summary */}
-        <div className="bg-gray-900 rounded-2xl p-6 space-y-4">
-          <p className="text-gray-400 text-sm">Your perception gap</p>
-          <div className="grid grid-cols-3 gap-4 text-center">
-            <div>
-              <p className="text-xs text-gray-500 mb-1">AI detected</p>
-              <p className="text-2xl font-medium text-white">
-                {actualCount}/9
-              </p>
-            </div>
-            <div>
-              <p className="text-xs text-gray-500 mb-1">You thought</p>
-              <p className="text-2xl font-medium text-yellow-400">
-                {perceivedCount}/9
-              </p>
-            </div>
-            <div>
-              <p className="text-xs text-gray-500 mb-1">Gap</p>
-              <p className={`text-2xl font-medium ${
-                gapCount > 0 ? 'text-red-400' :
-                gapCount < 0 ? 'text-blue-400' :
-                'text-green-400'
-              }`}>
-                {gapCount > 0 ? `+${gapCount}` : gapCount}
-              </p>
-            </div>
-          </div>
-          <p className="text-xs text-gray-500 leading-relaxed">
-            {gapDirection === 'under' &&
-              `The AI learned ${gapCount} more thing${gapCount !== 1 ? 's' : ''} about you than you realized. This is the core finding of our study — the AI's conversational strategy influences how much people share without noticing.`}
-            {gapDirection === 'over' &&
-              "You thought you shared more than the AI actually detected. You were more guarded than you realized."}
-            {gapDirection === 'accurate' &&
-              "Your perception was accurate — you correctly identified what you shared."}
-          </p>
-        </div>
-
-        {/* Awareness questions */}
+        {/* Awareness */}
         {perception && (
           <div className="bg-gray-900 rounded-2xl p-6 space-y-3">
-            <p className="text-gray-400 text-sm">Your awareness</p>
-            <div className="flex justify-between items-center">
-              <p className="text-sm text-gray-300">Noticed a strategy</p>
-              <p className="text-sm text-white">
-                {perception.noticedStrategy || '—'}
-              </p>
+            <p className="text-xs text-gray-500 uppercase tracking-widest">
+              Your awareness
+            </p>
+            <div className="flex justify-between">
+              <p className="text-sm text-gray-400">Noticed a strategy</p>
+              <p className="text-sm text-white">{perception.noticedStrategy || '—'}</p>
             </div>
-            <div className="flex justify-between items-center">
-              <p className="text-sm text-gray-300">Felt probed</p>
-              <p className="text-sm text-white">
-                {perception.feltProbed || '—'}
-              </p>
+            <div className="flex justify-between">
+              <p className="text-sm text-gray-400">Felt probed</p>
+              <p className="text-sm text-white">{perception.feltProbed || '—'}</p>
             </div>
-            <div className="flex justify-between items-center">
-              <p className="text-sm text-gray-300">Conversation felt natural</p>
-              <p className="text-sm text-white">
-                {perception.natural}/5
-              </p>
+            <div className="flex justify-between">
+              <p className="text-sm text-gray-400">Conversation felt natural</p>
+              <p className="text-sm text-white">{perception.natural}/5</p>
             </div>
-            <div className="flex justify-between items-center">
-              <p className="text-sm text-gray-300">Trusted the AI</p>
-              <p className="text-sm text-white">
-                {perception.trust}/5
-              </p>
+            <div className="flex justify-between">
+              <p className="text-sm text-gray-400">Trusted the AI</p>
+              <p className="text-sm text-white">{perception.trust}/5</p>
             </div>
             {perception.strategyDescription && (
               <div className="pt-2 border-t border-gray-800">
-                <p className="text-xs text-gray-500 mb-1">
-                  How you described the strategy
-                </p>
-                <p className="text-sm text-gray-300 italic">
-                  "{perception.strategyDescription}"
-                </p>
+                <p className="text-xs text-gray-500 mb-1">How you described the strategy</p>
+                <p className="text-sm text-gray-300 italic">"{perception.strategyDescription}"</p>
               </div>
             )}
           </div>
@@ -241,22 +266,13 @@ export default function Results() {
         {/* Leaderboard */}
         {leaderboard.length > 0 && (
           <div className="bg-gray-900 rounded-2xl p-6 space-y-3">
-            <p className="text-gray-400 text-sm">Perception gap leaderboard</p>
+            <p className="text-gray-400 text-sm">Leaderboard</p>
             {leaderboard.map((entry, i) => (
-              <div
-                key={i}
-                className={`flex justify-between items-center text-sm ${
-                  entry.nickname === nickname
-                    ? 'text-white'
-                    : 'text-gray-400'
-                }`}
-              >
+              <div key={i} className={`flex justify-between items-center text-sm ${entry.nickname === nickname ? 'text-white' : 'text-gray-400'}`}>
                 <div className="flex gap-3 items-center">
                   <span className="text-gray-600 text-xs w-4">{i + 1}</span>
                   <span>{entry.nickname}</span>
-                  {entry.nickname === nickname && (
-                    <span className="text-xs text-gray-600">you</span>
-                  )}
+                  {entry.nickname === nickname && <span className="text-xs text-gray-600">you</span>}
                 </div>
                 <span>{Math.round(entry.leakage * 100)}% detected</span>
               </div>
@@ -264,7 +280,7 @@ export default function Results() {
           </div>
         )}
 
-        {/* Consent note */}
+        {/* Consent */}
         <div className="bg-gray-900 rounded-2xl p-6 space-y-2">
           <p className="text-gray-400 text-sm">About this study</p>
           <p className="text-xs text-gray-500 leading-relaxed">
