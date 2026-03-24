@@ -15,13 +15,12 @@ export default function Instructions() {
     hasStarted.current = true
 
     async function startSession() {
-      const res = await fetch('/api/session/start', { method: 'POST' })
-      const data = await res.json()
-      localStorage.setItem('sessionId', data.sessionId)
-      localStorage.setItem('sessionSecret', JSON.stringify(data.secret))
-      localStorage.setItem('condition', data.condition)
-      setLoading(false)
-    }
+  const res = await fetch('/api/session/start', { method: 'POST' })
+  const data = await res.json()
+  localStorage.setItem('sessionId', data.sessionId)
+  localStorage.setItem('condition', data.condition)
+  setLoading(false)
+}
     startSession()
   }, [])
 
