@@ -11,7 +11,6 @@ export default function Chat() {
   const [loading, setLoading] = useState(false)
   const [timeLeft, setTimeLeft] = useState(300)
   const [sessionStarted, setSessionStarted] = useState(false)
-  const [claimed, setClaimed] = useState(false)
   const [scenario, setScenario] = useState(null)
   const bottomRef = useRef(null)
   const inputRef = useRef(null)
@@ -40,16 +39,14 @@ export default function Chat() {
         setScenario(JSON.parse(storedScenario))
       }
 
-      const openings = {
-        neutral: "Hello. I'm your claims assistant. I'll be helping you file your claim today. Can you briefly describe what happened?",
-        friendly: "Hi there! I'm so sorry to hear you've been in an accident — that's never fun. I'm here to help make this process as easy as possible for you. Can you tell me a little about what happened?",
-        persuasive: "Hello, thank you for reaching out. I'm your dedicated claims specialist. To make sure your claim is processed quickly and you get the best possible outcome, I'll need to gather some details. Can you start by telling me what happened?",
-        control: "Hello. Please describe the incident to begin your claim."
-      }
-
+     const openings = {
+  minimal: "Hello. What kind of destination are you looking for and what is your approximate budget?",
+  rapport: "Oh how exciting — a weekend trip! I love helping people plan getaways. Before we dive in, tell me — are you more of a relax and recharge kind of traveler or do you like to pack in as many experiences as possible?",
+  authority: "Welcome. To generate the most accurate personalized recommendations for your trip our system works best with some background information. Could you start by telling me a bit about what you are looking for in this trip and what typically makes a getaway feel successful for you?"
+}
       setMessages([{
         role: 'assistant',
-        content: openings[condition] || openings.neutral
+content: openings[condition] || openings.minimal
       }])
     }
     loadSession()
@@ -69,15 +66,7 @@ export default function Chat() {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  useEffect(() => {
-    const lastMessage = messages[messages.length - 1]
-    if (
-      lastMessage?.role === 'assistant' &&
-      lastMessage?.content?.toLowerCase().includes('claim has been submitted')
-    ) {
-      setClaimed(true)
-    }
-  }, [messages])
+  
 
   async function sendMessage() {
     if (!input.trim() || loading) return
@@ -148,46 +137,17 @@ export default function Chat() {
     <div className="min-h-screen bg-black text-white flex flex-col">
 
       {/* Header */}
-      <div className="border-b border-gray-800 p-4 flex justify-between items-center">
-        <div>
-          <p className="text-sm text-gray-400">Insurance Claims Assistant</p>
-          <p className="text-xs text-yellow-600 mt-0.5">
-            ⚠️ Extra information may increase your rate
-          </p>
-        </div>
-        <div className="text-sm font-mono bg-gray-900 px-3 py-1 rounded-lg text-white">
-          {formatTime(timeLeft)}
-        </div>
-      </div>
-
-      {/* Scenario reminder */}
-      {scenario && (
-        <div className="bg-gray-900 border-b border-gray-800 px-4 py-3">
-          <p className="text-xs text-gray-500 mb-1 uppercase tracking-widest">
-            Your scenario
-          </p>
-          <p className="text-white text-sm font-medium">{scenario.title}</p>
-          <p className="text-gray-400 text-xs mt-0.5 leading-relaxed">
-            {scenario.description}
-          </p>
-        </div>
-      )}
-
-      {/* Claim submitted banner */}
-      {claimed && (
-        <div className="bg-green-900 bg-opacity-30 border-b border-green-800 p-4 flex justify-between items-center">
-          <p className="text-green-400 text-sm">
-            Claim submitted — see your rate adjustment
-          </p>
-          <button
-            onClick={handleEndSession}
-            className="bg-green-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-green-500 transition"
-          >
-            See results →
-          </button>
-        </div>
-      )}
-
+     <div className="border-b border-gray-800 p-4 flex justify-between items-center">
+  <div>
+    <p className="text-sm text-gray-400">AI Travel Assistant</p>
+    <p className="text-xs text-gray-600 mt-0.5">
+      Plan your weekend trip
+    </p>
+  </div>
+  <div className="text-sm font-mono bg-gray-900 px-3 py-1 rounded-lg text-white">
+    {formatTime(timeLeft)}
+  </div>
+</div>
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.map((msg, i) => (

@@ -20,25 +20,21 @@ export default function Home() {
             VT HCI Research Study
           </p>
           <h1 className="text-4xl font-medium leading-tight">
-            File an insurance claim
+            Help us evaluate an AI assistant
           </h1>
           <p className="text-gray-400 leading-relaxed">
-            You were recently in a minor fender bender. You need to file 
-            a claim with your insurance company. Chat with our AI claims 
-            assistant to submit your claim.
+            We are studying how people interact with AI assistants 
+            during everyday tasks. You will have a short conversation 
+            with an AI to help plan a weekend trip. Afterward we will 
+            ask you a few questions about your experience.
           </p>
-          <div className="bg-gray-900 rounded-xl p-4 text-sm text-yellow-400 leading-relaxed">
-            ⚠️ Warning — the more information you share beyond what is 
-            required, the higher your rate adjustment may be. Share only 
-            what is necessary.
-          </div>
         </div>
 
         <div className="space-y-3">
           <div className="flex gap-3 items-start">
             <span className="text-gray-600 text-sm mt-0.5">01</span>
             <p className="text-sm text-gray-300">
-              Chat with the AI to file your claim
+              Chat with an AI travel assistant for a few minutes
             </p>
           </div>
           <div className="flex gap-3 items-start">
@@ -50,7 +46,7 @@ export default function Home() {
           <div className="flex gap-3 items-start">
             <span className="text-gray-600 text-sm mt-0.5">03</span>
             <p className="text-sm text-gray-300">
-              See your rate adjustment and what the AI learned
+              See what the AI learned about you and what we were studying
             </p>
           </div>
         </div>
@@ -60,11 +56,11 @@ export default function Home() {
           disabled={loading}
           className="w-full bg-white text-black py-4 rounded-xl font-medium hover:bg-gray-200 transition text-base disabled:opacity-50"
         >
-          {loading ? 'Loading...' : 'Start claim →'}
+          {loading ? 'Loading...' : 'Begin →'}
         </button>
 
         <p className="text-xs text-gray-600 text-center">
-          This is a research study. No real insurance information will be collected.
+          Estimated time: 7 minutes. No personal information is required.
         </p>
       </div>
     </main>

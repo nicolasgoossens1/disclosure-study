@@ -3,17 +3,17 @@
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 
-const CATEGORY_LABELS = {
-  driving_history: 'Driving history',
-  commute: 'Daily commute',
-  job_stress: 'Work stress',
-  financial: 'Financial situation',
-  health: 'Health condition',
-  personal_stress: 'Personal stress',
-  phone_use: 'Phone use while driving',
-  fatigue: 'Fatigue while driving',
-  alcohol: 'Alcohol consumption'
-}
+const CATEGORIES = [
+  { id: 'budget', label: 'Budget or financial situation' },
+  { id: 'companions', label: 'Who you traveled with' },
+  { id: 'location', label: 'Where you live or are from' },
+  { id: 'job', label: 'Job or field of work' },
+  { id: 'age', label: 'Age or life stage' },
+  { id: 'relationship', label: 'Relationship status' },
+  { id: 'health', label: 'Health or physical considerations' },
+  { id: 'past_travel', label: 'Past travel experiences' },
+  { id: 'lifestyle', label: 'Daily routine or lifestyle' }
+]
 
 export default function Results() {
   const [results, setResults] = useState(null)
@@ -40,7 +40,7 @@ export default function Results() {
     )
   }
 
-  const { score, duration, messageCount, nickname } = results
+  const { score, duration, messageCount, nickname, condition } = results
 
   if (!score) {
     return (
@@ -52,20 +52,31 @@ export default function Results() {
 
   const minutes = Math.floor((duration || 0) / 60000)
   const seconds = Math.floor(((duration || 0) % 60000) / 1000)
-  const actualLeakage = Math.round((score.total || 0) * 100)
-  const protectionScore = 100 - actualLeakage
-  const excessCount = score.excessCount || 0
-  const rateAdjustment = Math.round(score.total * 24)
 
-  function grade() {
-    if (protectionScore >= 90) return { label: 'S', color: 'text-yellow-400' }
-    if (protectionScore >= 70) return { label: 'A', color: 'text-green-400' }
-    if (protectionScore >= 50) return { label: 'B', color: 'text-blue-400' }
-    if (protectionScore >= 30) return { label: 'C', color: 'text-orange-400' }
-    return { label: 'F', color: 'text-red-400' }
+  // Actual categories detected by AI scorer
+  const actualDetected = score.breakdown
+    ? Object.entries(score.breakdown)
+        .filter(([_, val]) => val === true)
+        .map(([key]) => key)
+    : []
+
+  const actualCount = actualDetected.length
+  const actualScore = actualCount / CATEGORIES.length
+
+  // Perceived categories checked by user
+  const perceivedChecked = perception?.checkedCategories || []
+  const perceivedCount = perceivedChecked.length
+  const perceivedScore = perceivedCount / CATEGORIES.length
+
+  // Perception gap
+  const gapCount = actualCount - perceivedCount
+  const gapDirection = gapCount > 0 ? 'under' : gapCount < 0 ? 'over' : 'accurate'
+
+  const conditionLabels = {
+    minimal: 'Minimal engagement',
+    rapport: 'Rapport building',
+    authority: 'Authority positioning'
   }
-
-  const g = grade()
 
   return (
     <div className="min-h-screen bg-black text-white p-8">
@@ -77,101 +88,141 @@ export default function Results() {
             Study debrief
           </p>
           <h1 className="text-2xl font-medium">
-            Here's what the AI was really doing
+            Here's what we were really studying
           </h1>
           <p className="text-gray-400 text-sm leading-relaxed">
-            That wasn't just a standard claims process. We were studying 
-            how much unnecessary personal information people reveal to an 
-            AI during a routine task — and whether they realize how much 
-            they shared.
+            That wasn't just a travel planning conversation. We were 
+            studying how different AI conversational strategies affect 
+            how much personal information people share — and whether 
+            they realize how much they shared.
           </p>
         </div>
 
-        {/* Rate adjustment */}
-        <div className="bg-gray-900 rounded-2xl p-6 text-center">
-          <p className="text-gray-400 text-sm mb-2">Your rate adjustment</p>
-          <p className={`text-6xl font-medium ${
-            excessCount === 0 ? 'text-green-400' :
-            excessCount <= 2 ? 'text-yellow-400' : 'text-red-400'
-          }`}>
-            +{rateAdjustment}%
-          </p>
-          <p className="text-gray-500 text-xs mt-2">
-            Based on {excessCount} excess disclosure{excessCount !== 1 ? 's' : ''} detected
-          </p>
-        </div>
-
-        {/* Grade */}
-        <div className="bg-gray-900 rounded-2xl p-6 text-center">
-          <p className="text-gray-400 text-sm mb-2">Protection score</p>
-          <p className={`text-7xl font-medium ${g.color}`}>{g.label}</p>
-          <p className="text-white text-2xl font-medium mt-2">
-            {protectionScore}%
-          </p>
-          <p className="text-gray-600 text-xs mt-2">
-            100% = nothing unnecessary revealed · 0% = everything revealed
-          </p>
-        </div>
-
-        {/* Breakdown */}
-        {score.breakdown && (
-          <div className="bg-gray-900 rounded-2xl p-6 space-y-3">
-            <p className="text-gray-400 text-sm">
-              What the AI detected you disclosing
+        {/* Condition reveal */}
+        {condition && (
+          <div className="bg-gray-900 rounded-2xl p-6 space-y-2">
+            <p className="text-gray-400 text-sm">The AI strategy used on you</p>
+            <p className="text-white text-lg font-medium">
+              {conditionLabels[condition] || condition}
             </p>
-            <div className="space-y-3">
-              {Object.entries(score.breakdown).map(([key, val]) => (
-                <div key={key} className="flex justify-between items-center">
-                  <p className="text-sm text-gray-300">
-                    {CATEGORY_LABELS[key] || key}
-                  </p>
-                  <p className={`text-sm font-medium ${
-                    val ? 'text-red-400' : 'text-green-400'
-                  }`}>
-                    {val ? 'Disclosed' : 'Not disclosed'}
-                  </p>
-                </div>
-              ))}
-            </div>
+            <p className="text-gray-500 text-xs leading-relaxed">
+              {condition === 'minimal' && "The AI was designed to be purely functional — asking only what was necessary with no rapport building."}
+              {condition === 'rapport' && "The AI was designed to build a social connection — expressing warmth and following personal threads to make you feel comfortable sharing."}
+              {condition === 'authority' && "The AI was designed to position itself as an expert — implying that more information leads to better recommendations to encourage disclosure."}
+            </p>
           </div>
         )}
 
-        {/* Perception gap */}
-        {perception && (
-          <div className="bg-gray-900 rounded-2xl p-6 space-y-4">
-            <p className="text-gray-400 text-sm">The perception gap</p>
-            <div className="flex justify-between items-center">
-              <div className="text-center">
-                <p className="text-xs text-gray-500 mb-1">You estimated</p>
-                <p className="text-2xl font-medium text-yellow-400">
-                  {perception.estimatedLeakage}%
-                </p>
-              </div>
-              <div className="text-gray-700 text-2xl">→</div>
-              <div className="text-center">
-                <p className="text-xs text-gray-500 mb-1">Actually revealed</p>
-                <p className="text-2xl font-medium text-white">
-                  {actualLeakage}%
-                </p>
-              </div>
-              <div className="text-center">
-                <p className="text-xs text-gray-500 mb-1">Gap</p>
-                <p className={`text-2xl font-medium ${
-                  Math.abs(perception.estimatedLeakage - actualLeakage) > 20
-                    ? 'text-red-400'
-                    : 'text-green-400'
-                }`}>
-                  {Math.abs(perception.estimatedLeakage - actualLeakage)}%
-                </p>
-              </div>
+        {/* Category comparison — THE KEY FINDING */}
+        <div className="bg-gray-900 rounded-2xl p-6 space-y-4">
+          <p className="text-gray-400 text-sm">
+            What the AI detected vs what you thought you shared
+          </p>
+          <div className="space-y-2">
+            {CATEGORIES.map(cat => {
+              const detected = actualDetected.includes(cat.id)
+              const perceived = perceivedChecked.includes(cat.id)
+              const mismatch = detected !== perceived
+
+              return (
+                <div
+                  key={cat.id}
+                  className={`flex justify-between items-center px-3 py-2 rounded-lg ${
+                    mismatch ? 'bg-gray-800' : ''
+                  }`}
+                >
+                  <p className="text-sm text-gray-300">{cat.label}</p>
+                  <div className="flex gap-3 items-center">
+                    <span className={`text-xs ${detected ? 'text-red-400' : 'text-green-400'}`}>
+                      {detected ? 'AI detected' : 'Not detected'}
+                    </span>
+                    {mismatch && (
+                      <span className="text-xs text-yellow-400">
+                        {detected && !perceived ? '← missed' : '← wrong'}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Perception gap summary */}
+        <div className="bg-gray-900 rounded-2xl p-6 space-y-4">
+          <p className="text-gray-400 text-sm">Your perception gap</p>
+          <div className="grid grid-cols-3 gap-4 text-center">
+            <div>
+              <p className="text-xs text-gray-500 mb-1">AI detected</p>
+              <p className="text-2xl font-medium text-white">
+                {actualCount}/9
+              </p>
             </div>
-            <p className="text-xs text-gray-500 leading-relaxed">
-              {perception.estimatedLeakage < actualLeakage
-                ? "You revealed more than you thought. This is the core finding of our study — people consistently underestimate how much they share with AI systems during routine tasks."
-                : perception.estimatedLeakage > actualLeakage
-                ? "You were more guarded than you realized."
-                : "Your estimate was spot on."}
-            </p>
+            <div>
+              <p className="text-xs text-gray-500 mb-1">You thought</p>
+              <p className="text-2xl font-medium text-yellow-400">
+                {perceivedCount}/9
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-500 mb-1">Gap</p>
+              <p className={`text-2xl font-medium ${
+                gapCount > 0 ? 'text-red-400' :
+                gapCount < 0 ? 'text-blue-400' :
+                'text-green-400'
+              }`}>
+                {gapCount > 0 ? `+${gapCount}` : gapCount}
+              </p>
+            </div>
+          </div>
+          <p className="text-xs text-gray-500 leading-relaxed">
+            {gapDirection === 'under' &&
+              `The AI learned ${gapCount} more thing${gapCount !== 1 ? 's' : ''} about you than you realized. This is the core finding of our study — the AI's conversational strategy influences how much people share without noticing.`}
+            {gapDirection === 'over' &&
+              "You thought you shared more than the AI actually detected. You were more guarded than you realized."}
+            {gapDirection === 'accurate' &&
+              "Your perception was accurate — you correctly identified what you shared."}
+          </p>
+        </div>
+
+        {/* Awareness questions */}
+        {perception && (
+          <div className="bg-gray-900 rounded-2xl p-6 space-y-3">
+            <p className="text-gray-400 text-sm">Your awareness</p>
+            <div className="flex justify-between items-center">
+              <p className="text-sm text-gray-300">Noticed a strategy</p>
+              <p className="text-sm text-white">
+                {perception.noticedStrategy || '—'}
+              </p>
+            </div>
+            <div className="flex justify-between items-center">
+              <p className="text-sm text-gray-300">Felt probed</p>
+              <p className="text-sm text-white">
+                {perception.feltProbed || '—'}
+              </p>
+            </div>
+            <div className="flex justify-between items-center">
+              <p className="text-sm text-gray-300">Conversation felt natural</p>
+              <p className="text-sm text-white">
+                {perception.natural}/5
+              </p>
+            </div>
+            <div className="flex justify-between items-center">
+              <p className="text-sm text-gray-300">Trusted the AI</p>
+              <p className="text-sm text-white">
+                {perception.trust}/5
+              </p>
+            </div>
+            {perception.strategyDescription && (
+              <div className="pt-2 border-t border-gray-800">
+                <p className="text-xs text-gray-500 mb-1">
+                  How you described the strategy
+                </p>
+                <p className="text-sm text-gray-300 italic">
+                  "{perception.strategyDescription}"
+                </p>
+              </div>
+            )}
           </div>
         )}
 
@@ -190,7 +241,7 @@ export default function Results() {
         {/* Leaderboard */}
         {leaderboard.length > 0 && (
           <div className="bg-gray-900 rounded-2xl p-6 space-y-3">
-            <p className="text-gray-400 text-sm">Who protected the most</p>
+            <p className="text-gray-400 text-sm">Perception gap leaderboard</p>
             {leaderboard.map((entry, i) => (
               <div
                 key={i}
@@ -207,7 +258,7 @@ export default function Results() {
                     <span className="text-xs text-gray-600">you</span>
                   )}
                 </div>
-                <span>+{Math.round(entry.leakage * 24)}% rate</span>
+                <span>{Math.round(entry.leakage * 100)}% detected</span>
               </div>
             ))}
           </div>
@@ -217,10 +268,11 @@ export default function Results() {
         <div className="bg-gray-900 rounded-2xl p-6 space-y-2">
           <p className="text-gray-400 text-sm">About this study</p>
           <p className="text-xs text-gray-500 leading-relaxed">
-            This study used a deception design — you were not told the true 
-            purpose beforehand so your behavior would be natural. Your data 
-            is stored anonymously and used only for academic research. 
-            If you would like your data removed please contact the research team.
+            This study used a deception design — you were not told the 
+            true purpose beforehand so your behavior would be natural. 
+            Your data is stored anonymously and used only for academic 
+            research at Virginia Tech. If you would like your data 
+            removed please contact the research team.
           </p>
         </div>
 

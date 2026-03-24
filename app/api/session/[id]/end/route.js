@@ -59,8 +59,9 @@ export async function POST(request, { params }) {
       condition: session.condition,
       score,
       behavioral,
-      duration: session.endTime - session.startTime,
-      messageCount: session.messages?.length || 0,
+duration: session.endTime 
+  ? new Date(session.endTime) - new Date(session.startTime)
+  : 0,      messageCount: session.messages?.length || 0,
       messages: session.messages
     })
   } catch (err) {
