@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server'
 
 export async function POST() {
   try {
-    const session = await createSession()
+    const session = await createSession('rapport') // DEMO OVERRIDE — remove after presentation
     return NextResponse.json({
       sessionId: session.sessionId,
       condition: session.condition

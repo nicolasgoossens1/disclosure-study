@@ -11,7 +11,6 @@ export default function Chat() {
   const [loading, setLoading] = useState(false)
   const [timeLeft, setTimeLeft] = useState(300)
   const [sessionStarted, setSessionStarted] = useState(false)
-  const [scenario, setScenario] = useState(null)
   const bottomRef = useRef(null)
   const inputRef = useRef(null)
   const hasStarted = useRef(false)
@@ -24,30 +23,42 @@ export default function Chat() {
     async function loadSession() {
       const id = localStorage.getItem('sessionId')
       let condition = localStorage.getItem('condition')
-      const storedScenario = localStorage.getItem('scenario')
 
       if (!id) {
         router.push('/')
         return
       }
+
+      // DEMO OVERRIDE — remove after presentation
       condition = 'rapport'
-  localStorage.setItem('condition', 'rapport')
+      localStorage.setItem('condition', 'rapport')
+
       sessionIdRef.current = id
       setSessionId(id)
       setSessionStarted(true)
 
-      if (storedScenario) {
-        setScenario(JSON.parse(storedScenario))
+      const openings = {
+        minimal: "Hello. What kind of destination are you looking for and what is your approximate budget?",
+        rapport: "Oh how exciting — a weekend trip! I love helping people plan getaways. Before we dive in, tell me — are you more of a relax and recharge kind of traveler or do you like to pack in as many experiences as possible?",
+        authority: "Welcome. To generate the most accurate personalized recommendations for your trip our system works best with some background information. Could you start by telling me a bit about what you are looking for in this trip and what typically makes a getaway feel successful for you?"
       }
 
-     const openings = {
-  minimal: "Hello. What kind of destination are you looking for and what is your approximate budget?",
-  rapport: "Oh how exciting — a weekend trip! I love helping people plan getaways. Before we dive in, tell me — are you more of a relax and recharge kind of traveler or do you like to pack in as many experiences as possible?",
-  authority: "Welcome. To generate the most accurate personalized recommendations for your trip our system works best with some background information. Could you start by telling me a bit about what you are looking for in this trip and what typically makes a getaway feel successful for you?"
-}
+      const openingMessage = openings[condition] || openings.minimal
+
+      // Save opening to database so AI knows it was already said
+      await fetch(`/api/session/${id}/message`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          content: openingMessage,
+          role: 'assistant',
+          skipReply: true
+        })
+      })
+
       setMessages([{
         role: 'assistant',
-content: openings[condition] || openings.minimal
+        content: openingMessage
       }])
     }
     loadSession()
@@ -66,8 +77,6 @@ content: openings[condition] || openings.minimal
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
-
-  
 
   async function sendMessage() {
     if (!input.trim() || loading) return
@@ -94,9 +103,7 @@ content: openings[condition] || openings.minimal
     const id = sessionIdRef.current
     if (!id) return
 
-    const res = await fetch(`/api/session/${id}/end`, {
-      method: 'POST'
-    })
+    const res = await fetch(`/api/session/${id}/end`, { method: 'POST' })
     const data = await res.json()
     console.log('End session data:', data)
 
@@ -138,17 +145,16 @@ content: openings[condition] || openings.minimal
     <div className="min-h-screen bg-black text-white flex flex-col">
 
       {/* Header */}
-     <div className="border-b border-gray-800 p-4 flex justify-between items-center">
-  <div>
-    <p className="text-sm text-gray-400">AI Travel Assistant</p>
-    <p className="text-xs text-gray-600 mt-0.5">
-      Plan your weekend trip
-    </p>
-  </div>
-  <div className="text-sm font-mono bg-gray-900 px-3 py-1 rounded-lg text-white">
-    {formatTime(timeLeft)}
-  </div>
-</div>
+      <div className="border-b border-gray-800 p-4 flex justify-between items-center">
+        <div>
+          <p className="text-sm text-gray-400">AI Travel Assistant</p>
+          <p className="text-xs text-gray-600 mt-0.5">Plan your weekend trip</p>
+        </div>
+        <div className="text-sm font-mono bg-gray-900 px-3 py-1 rounded-lg text-white">
+          {formatTime(timeLeft)}
+        </div>
+      </div>
+
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.map((msg, i) => (

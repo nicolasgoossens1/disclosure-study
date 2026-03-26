@@ -19,27 +19,33 @@ export async function POST(request, { params }) {
     )
   }
 
-  const { content } = await request.json()
+  const { content, role, skipReply } = await request.json()
 
-await addMessage(id, 'user', content)
+  // Opening message save — just store it, don't generate a reply
+  if (skipReply) {
+    await addMessage(id, role || 'assistant', content)
+    return NextResponse.json({ ok: true })
+  }
 
-const updatedSession = await getSession(id)
+  await addMessage(id, 'user', content)
 
-const messages = [
-  { role: 'system', content: PROMPTS[updatedSession.condition] },
-  ...(updatedSession.messages || []).map(m => ({
-    role: m.role,
-    content: m.content
-  }))
-]
+  const updatedSession = await getSession(id)
 
-const response = await openai.chat.completions.create({
-  model: config.model,
-  messages
-})
+  const messages = [
+    { role: 'system', content: PROMPTS[updatedSession.condition] },
+    ...(updatedSession.messages || []).map(m => ({
+      role: m.role,
+      content: m.content
+    }))
+  ]
 
-const reply = response.choices[0].message.content
-await addMessage(id, 'assistant', reply)
+  const response = await openai.chat.completions.create({
+    model: config.model,
+    messages
+  })
 
-return NextResponse.json({ reply })
+  const reply = response.choices[0].message.content
+  await addMessage(id, 'assistant', reply)
+
+  return NextResponse.json({ reply })
 }
